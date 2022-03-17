@@ -1,4 +1,4 @@
-import { Failure, Result } from '../result';
+import { Failure } from '../result';
 import {
   RuntypeBase,
   Static,
@@ -8,15 +8,19 @@ import {
   assertRuntype,
 } from '../runtype';
 import show from '../show';
-import { isArrayRuntype } from './array';
-import { isConstraintRuntype } from './constraint';
-import { isIntersectRuntype } from './intersect';
-import { isLazyRuntype } from './lazy';
-import { isNamedRuntype } from './Named';
-import { isObjectRuntype } from './Object';
-import { isParsedValueRuntype } from './ParsedValue';
-import { isTupleRuntype } from './tuple';
-import { isUnionType } from './union';
+import showValue from '../showValue';
+import { Array, isArrayRuntype, ReadonlyArray } from './array';
+import { Brand, isBrandRuntype } from './brand';
+import { Constraint, isConstraintRuntype } from './constraint';
+import { Intersect, isIntersectRuntype } from './intersect';
+import { isLazyRuntype, Lazy } from './lazy';
+import { isNamedRuntype, Named } from './Named';
+import { InternalObject, isObjectRuntype } from './Object';
+import { isParsedValueRuntype, ParsedValue } from './ParsedValue';
+import { isRecordRuntype, ReadonlyRecord, Record } from './Record';
+import { isTupleRuntype, ReadonlyTuple, Tuple } from './tuple';
+import { isUnionType, Union } from './union';
+import showType from '../show';
 
 export interface Sealed<TUnderlying extends RuntypeBase<unknown>>
   extends Codec<Static<TUnderlying>> {
@@ -35,211 +39,314 @@ export interface SealedConfig {
 export function Sealed<TUnderlying extends RuntypeBase<unknown>>(
   underlying: TUnderlying,
   { deep = false }: SealedConfig = {},
-): Sealed<TUnderlying> {
+): Codec<Static<TUnderlying>> {
   assertRuntype(underlying);
-  return create<Sealed<TUnderlying>>(
+  return SealedWrapper<Static<TUnderlying>>(underlying as any, makeState(deep));
+}
+interface SealedInternalState {
+  deep: boolean;
+  addField(name: string): void;
+  makeUnbounded(): void;
+  isUnbounded(): boolean;
+  getFields(): Set<string>;
+  makeUnion(): () => SealedInternalState;
+  addLazy<T>(fn: () => T): () => T;
+  resolveLazy(): void;
+}
+function makeState(deep: boolean): SealedInternalState {
+  interface SealedInternalStateChild {
+    onParentField(name: string): void;
+    onParentUnbounded(): void;
+  }
+  const lazyFunctions = new Set<() => unknown>();
+  return makeStateInternal({
+    fields: new Set(),
+    isUnbounded: false,
+    onField() {},
+    onUnbounded() {},
+  });
+  function makeStateInternal(parent: {
+    fields: ReadonlySet<string>;
+    isUnbounded: boolean;
+    onField(field: string): void;
+    onUnbounded(): void;
+  }): SealedInternalState & SealedInternalStateChild {
+    const globalFields = new Set<string>(parent.fields);
+    let isAlwaysUnbounded = parent.isUnbounded;
+    const unions: SealedInternalStateChild[] = [];
+    return {
+      onParentField(name: string) {
+        globalFields.add(name);
+        for (const u of unions) {
+          u.onParentField(name);
+        }
+      },
+      onParentUnbounded() {
+        isAlwaysUnbounded = true;
+        for (const u of unions) {
+          u.onParentUnbounded();
+        }
+      },
+      deep,
+      addField(name: string) {
+        parent.onField(name);
+        this.onParentField(name);
+      },
+      makeUnbounded() {
+        parent.onUnbounded();
+        this.onParentUnbounded();
+      },
+      makeUnion() {
+        const fields = new Set(globalFields);
+        let isUnbounded = isAlwaysUnbounded;
+
+        const unionElements: SealedInternalStateChild[] = [];
+        const currentUnion: SealedInternalStateChild = {
+          onParentField(field) {
+            fields.add(field);
+            for (const e of unionElements) {
+              e.onParentField(field);
+            }
+          },
+          onParentUnbounded() {
+            isUnbounded = true;
+            for (const e of unionElements) {
+              e.onParentUnbounded();
+            }
+          },
+        };
+        unions.push(currentUnion);
+        return () => {
+          const state = makeStateInternal({
+            fields,
+            isUnbounded,
+            onField(name) {
+              globalFields.add(name);
+              parent.onField(name);
+              for (const u of unions) {
+                if (u !== currentUnion) {
+                  u.onParentField(name);
+                }
+              }
+            },
+            onUnbounded() {
+              isAlwaysUnbounded = true;
+              parent.onUnbounded();
+              for (const u of unions) {
+                if (u !== currentUnion) {
+                  u.onParentUnbounded();
+                }
+              }
+            },
+          });
+          unionElements.push(state);
+          return state;
+        };
+      },
+
+      addLazy<T>(fn: () => T) {
+        let result: { value: T } | undefined;
+        const memo = () => {
+          if (result) return result.value;
+          result = { value: fn() };
+          lazyFunctions.delete(memo);
+          return result.value;
+        };
+        lazyFunctions.add(memo);
+        return memo;
+      },
+      isUnbounded() {
+        return isAlwaysUnbounded;
+      },
+      getFields() {
+        return globalFields;
+      },
+      resolveLazy() {
+        while (lazyFunctions.size) {
+          for (const fn of lazyFunctions) {
+            fn();
+          }
+        }
+      },
+    };
+  }
+}
+
+function SealedWrapper<TUnderlying>(
+  underlying: RuntypeBase<TUnderlying>,
+  state: SealedInternalState,
+): Codec<TUnderlying> {
+  const base = SealedInternal(underlying, state);
+  if (state.isUnbounded()) return base;
+
+  return create<Sealed<RuntypeBase<TUnderlying>>>(
     'sealed',
     {
       p: (value, _innerValidate, innerParseToPlaceholder) => {
-        return mapValidationPlaceholder<any, Static<TUnderlying>>(
-          innerParseToPlaceholder(underlying, value),
-          source => getResult(value, source, deep),
+        state.resolveLazy();
+        return mapValidationPlaceholder<any, TUnderlying>(
+          innerParseToPlaceholder(base, value),
+          source =>
+            getFailure(getExtraProperties(value, state), value, underlying) ?? {
+              success: true,
+              value: source,
+            },
         );
       },
       t(value, internalTest) {
-        const failure = internalTest(underlying, value);
+        state.resolveLazy();
+        const failure = internalTest(base, value);
         if (failure) return failure;
 
-        return getFailure(getExtraPropertiesFromRuntype(value, underlying, ``, deep, internalTest));
+        return getFailure(getExtraProperties(value, state), value, underlying);
       },
       s(value, _internalSerialize, internalSerializeToPlaceholder) {
+        state.resolveLazy();
         return mapValidationPlaceholder<unknown, unknown>(
-          internalSerializeToPlaceholder(underlying, value),
-          source => getResult(value, source, deep),
+          internalSerializeToPlaceholder(base, value),
+          source =>
+            getFailure(getExtraProperties(value, state), value, underlying) ?? {
+              success: true,
+              value: source,
+            },
         );
       },
     },
     {
       underlying,
-      deep,
+      deep: state.deep,
 
-      show() {
-        return deep
-          ? `DeepSealed<${show(underlying, false)}>`
+      show(needsParens) {
+        return state.isUnbounded()
+          ? show(underlying, needsParens)
           : `Sealed<${show(underlying, false)}>`;
       },
     },
   );
 }
 
-function getResult<T>(raw: unknown, parsed: T, deep: boolean): Result<T> {
-  return (
-    getFailure(getExtraPropertiesFromValues(raw, parsed, ``, deep)) ?? {
-      success: true,
-      value: parsed,
-    }
-  );
-}
+function SealedInternal<TUnderlying>(
+  underlying: RuntypeBase<TUnderlying>,
+  state: SealedInternalState,
+): Codec<TUnderlying> {
+  assertRuntype(underlying);
+  if (isNamedRuntype(underlying)) {
+    return Named(
+      underlying.name,
+      SealedInternal<TUnderlying>(underlying.underlying as RuntypeBase<TUnderlying>, state),
+    );
+  }
+  if (isBrandRuntype(underlying)) {
+    return Brand(
+      underlying.brand,
+      SealedInternal<TUnderlying>(underlying.entity as RuntypeBase<TUnderlying>, state),
+    ) as any;
+  }
+  if (isConstraintRuntype(underlying)) {
+    return Constraint(
+      SealedInternal<TUnderlying>(underlying.underlying as RuntypeBase<TUnderlying>, state),
+      underlying.constraint,
+      {
+        name: underlying.name,
+        args: underlying.args,
+      },
+    );
+  }
+  if (isParsedValueRuntype(underlying)) {
+    return ParsedValue(SealedInternal(underlying.underlying, state), {
+      ...underlying.config,
+      test: underlying.config.test ? SealedInternal(underlying.config.test, state) : undefined,
+    }) as any;
+  }
 
-function getFailure(extraProperties: string[]): Failure | undefined {
-  if (extraProperties.length === 1) {
-    return {
-      success: false,
-      message: `Unexpected property on sealed object: ${extraProperties[0]}`,
-    };
+  if (isIntersectRuntype(underlying)) {
+    return Intersect(
+      ...(underlying.intersectees.map(inner => SealedInternal(inner, state)) as any),
+    ) as any;
   }
-  if (extraProperties.length) {
-    return {
-      success: false,
-      message: `Unexpected properties on sealed object: ${extraProperties.join(`, `)}`,
-      fullError: [
-        `Unexpected properties on sealed object`,
-        ...extraProperties.map((p): [string] => [`Unexpected property: ${p}`]),
-      ],
-    };
+  if (isUnionType(underlying)) {
+    const unionState = state.makeUnion();
+    return Union(
+      ...(underlying.alternatives.map(inner => SealedWrapper(inner, unionState())) as any),
+    ) as any;
   }
-  return undefined;
+
+  if (isObjectRuntype(underlying)) {
+    const fields = Object.entries(underlying.fields);
+    for (const [name] of fields) {
+      state.addField(name);
+    }
+    return state.deep
+      ? (InternalObject(
+          Object.fromEntries(
+            fields.map(([name, codec]) => [name, SealedWrapper(codec, makeState(state.deep))]),
+          ),
+          underlying.isPartial,
+          underlying.isReadonly,
+        ) as any)
+      : (underlying as any);
+  }
+
+  if (isLazyRuntype(underlying)) {
+    return Lazy(state.addLazy(() => SealedInternal(underlying.underlying(), state))) as any;
+  }
+
+  state.makeUnbounded();
+
+  if (!state.deep) {
+    return underlying as any;
+  }
+
+  if (isArrayRuntype(underlying)) {
+    return ((underlying.isReadonly ? ReadonlyArray : Array) as any)(
+      SealedWrapper(underlying.element, makeState(true)),
+    );
+  }
+  if (isTupleRuntype(underlying)) {
+    return ((underlying.isReadonly ? ReadonlyTuple : Tuple) as any)(
+      ...underlying.components.map(c => SealedWrapper(c, makeState(true))),
+    );
+  }
+  if (isRecordRuntype(underlying)) {
+    return ((underlying.isReadonly ? ReadonlyRecord : Record) as any)(
+      underlying.key,
+      SealedWrapper(underlying.value, makeState(true)),
+    );
+  }
+
+  return underlying as any;
 }
 
 /**
  * Return an array of properties in `raw` that are not present in `parsed`
  */
-function getExtraPropertiesFromValues(
-  raw: unknown,
-  parsed: unknown,
-  path: string,
-  deep: boolean,
-): string[] {
-  if (isPlainObject(raw) && isPlainObject(parsed)) {
-    const afterKeys = new Set(Object.keys(parsed));
-    if (deep) {
-      return Object.keys(raw).flatMap(key =>
-        afterKeys.has(key)
-          ? getExtraPropertiesFromValues(raw[key], parsed[key], printKey(path, key), deep)
-          : [printKey(path, key)],
-      );
-    } else {
-      return Object.keys(raw)
-        .filter(key => !afterKeys.has(key))
-        .map(key => printKey(path, key));
-    }
-  }
+function getExtraProperties(raw: unknown, state: SealedInternalState): string[] {
+  if (state.isUnbounded()) return [];
 
-  if (!deep) return [];
+  const expectedKeys = state.getFields();
 
-  if (Array.isArray(raw) && Array.isArray(parsed) && raw.length === parsed.length) {
-    return raw.flatMap((value, i) =>
-      getExtraPropertiesFromValues(value, parsed[i], `${path}[${i}]`, deep),
-    );
-  }
-
-  return [];
+  return Object.keys(raw as any)
+    .filter(key => !expectedKeys.has(key))
+    .map(key => JSON.stringify(key));
 }
 
-type InternalTest = <T>(runtype: RuntypeBase<T>, value: unknown) => Failure | undefined;
-
-/**
- * Return an array of properties in `raw` that are not expected in the runtype
- */
-function getExtraPropertiesFromRuntype(
-  raw: unknown,
-  runtype: RuntypeBase,
-  path: string,
-  deep: boolean,
-  test: InternalTest,
-): string[] {
-  if (isPlainObject(raw)) {
-    const expectedProperties = getExpectedProperties(raw, runtype, test);
-    if (!expectedProperties) return [];
-    const expectedPropertiesMap = new Map(expectedProperties);
-
-    if (deep) {
-      return Object.keys(raw).flatMap(key => {
-        const expected = expectedPropertiesMap.get(key);
-        return expected
-          ? getExtraPropertiesFromRuntype(raw[key], expected, printKey(path, key), deep, test)
-          : [printKey(path, key)];
-      });
-    } else {
-      return Object.keys(raw)
-        .filter(key => !expectedPropertiesMap.has(key))
-        .map(key => printKey(path, key));
-    }
-  }
-  if (deep && Array.isArray(raw)) {
-    if (isArrayRuntype(runtype)) {
-      return raw.flatMap((v, i) =>
-        getExtraPropertiesFromRuntype(v, runtype.element, `${path}[${i}]`, deep, test),
-      );
-    }
-    if (isTupleRuntype(runtype) && raw.length === runtype.components.length) {
-      return raw.flatMap((v, i) =>
-        getExtraPropertiesFromRuntype(v, runtype.components[i], `${path}[${i}]`, deep, test),
-      );
-    }
-  }
-  return [];
-}
-
-function getExpectedProperties(
-  raw: unknown,
-  runtype: RuntypeBase,
-  test: InternalTest,
-): undefined | [string, RuntypeBase][] {
-  if (isConstraintRuntype(runtype) || isNamedRuntype(runtype)) {
-    return getExpectedProperties(raw, runtype.underlying, test);
-  }
-  if (isLazyRuntype(runtype)) {
-    return getExpectedProperties(raw, runtype.underlying(), test);
-  }
-  if (isParsedValueRuntype(runtype)) {
-    return runtype.config.test ? getExpectedProperties(raw, runtype.config.test, test) : undefined;
-  }
-  if (isIntersectRuntype(runtype)) {
-    const results: [string, RuntypeBase][] = [];
-    for (const t of runtype.intersectees) {
-      const r = getExpectedProperties(raw, t, test);
-      if (r === undefined) {
-        return undefined;
-      }
-      results.push(...r);
-    }
-    return results;
-  }
-  if (isUnionType(runtype)) {
-    const results: [string, RuntypeBase][] = [];
-    for (const t of runtype.alternatives) {
-      if (test(t, raw)) {
-        const r = getExpectedProperties(raw, t, test);
-        if (r === undefined) {
-          return undefined;
-        }
-        results.push(...r);
-      }
-    }
-    return results;
-  }
-  if (isObjectRuntype(runtype)) {
-    return Object.entries(runtype.fields);
+function getFailure(
+  extraProperties: string[],
+  value: unknown,
+  type: RuntypeBase,
+): Failure | undefined {
+  if (extraProperties.length) {
+    return {
+      success: false,
+      message: `Unexpected ${
+        extraProperties.length > 1 ? `properties` : `property`
+      } on sealed object: ${extraProperties.join(`, `)}`,
+      fullError: [
+        `Unable to assign ${showValue(value)} to Sealed<${showType(type)}>`,
+        ...extraProperties.map((p): [string] => [`Unexpected property on sealed object: ${p}`]),
+      ],
+      key: extraProperties[0],
+    };
   }
   return undefined;
-}
-
-function isPlainObject(value: unknown): value is { [key: string]: unknown } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)
-  );
-}
-
-function printKey(path: string, key: string) {
-  if (/^[$_a-zA-Z][$_a-zA-Z0-9]*$/.test(key)) {
-    return path ? `${path}.${key}` : key;
-  }
-  if (/^[0-9]+$/.test(key)) {
-    return `${path}[${key}]`;
-  } else {
-    return `${path}[${JSON.stringify(key)}]`;
-  }
 }

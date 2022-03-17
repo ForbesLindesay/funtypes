@@ -82,7 +82,9 @@ export function Tuple<
       components,
       isReadonly: false,
       show() {
-        return `[${(components as readonly RuntypeBase<unknown>[])
+        return `${this.isReadonly ? `readonly ` : ``}[${(components as readonly RuntypeBase<
+          unknown
+        >[])
           .map(e => show(e, false))
           .join(', ')}]`;
       },

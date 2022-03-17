@@ -1,4 +1,5 @@
 import {
+  Array,
   String,
   Partial,
   ParsedValue,
@@ -13,7 +14,16 @@ import {
   Union,
   Number,
   showType,
+  Tuple,
+  Literal,
+  Record,
+  ReadonlyArray,
+  ReadonlyTuple,
+  ReadonlyRecord,
+  ReadonlyObject,
+  Brand,
 } from '..';
+import { Unknown } from './unknown';
 
 const SealableTypes: (
   | Codec<{ hello: string; world: string | undefined }>
@@ -34,6 +44,10 @@ for (const t of BaseSealableTypes) {
 
 for (const t of BaseSealableTypes) {
   SealableTypes.push(Lazy(() => t));
+}
+
+for (const t of BaseSealableTypes) {
+  SealableTypes.push(Brand(`x`, t) as any);
 }
 
 for (const t of BaseSealableTypes) {
@@ -67,39 +81,50 @@ for (const t of SealableTypes) {
     for (const { obj, result } of [
       {
         obj: { hello: 'a', world: 'b', otherProperty: 'c' },
-        result: {
+        result: (t: any) => ({
           success: false,
-          message: `Unexpected property on sealed object: otherProperty`,
-        },
+          message: `Unexpected property on sealed object: "otherProperty"`,
+          fullError: [
+            `Unable to assign {hello: "a", world: "b", otherProperty: "c"} to ${showType(t)}`,
+            ['Unexpected property on sealed object: "otherProperty"'],
+          ],
+          key: '"otherProperty"',
+        }),
       },
       {
         obj: { hello: 'a', otherProperty: 'c' },
-        result: {
+        result: (t: any) => ({
           success: false,
-          message: `Unexpected property on sealed object: otherProperty`,
-        },
+          message: `Unexpected property on sealed object: "otherProperty"`,
+          fullError: [
+            `Unable to assign {hello: "a", otherProperty: "c"} to ${showType(t)}`,
+            ['Unexpected property on sealed object: "otherProperty"'],
+          ],
+          key: '"otherProperty"',
+        }),
       },
       {
         obj: { hello: 'a', world: 'b', otherProperty: 'c', secondOtherProperty: 'd' },
-        result: {
+        result: (t: any) => ({
           success: false,
+          message: 'Unexpected properties on sealed object: "otherProperty", "secondOtherProperty"',
           fullError: [
-            'Unexpected properties on sealed object',
-            ['Unexpected property: otherProperty'],
-            ['Unexpected property: secondOtherProperty'],
+            `Unable to assign {hello: "a", world: "b", otherProperty: "c" ... } to ${showType(t)}`,
+            ['Unexpected property on sealed object: "otherProperty"'],
+            ['Unexpected property on sealed object: "secondOtherProperty"'],
           ],
-          message: 'Unexpected properties on sealed object: otherProperty, secondOtherProperty',
-        },
+          key: '"otherProperty"',
+        }),
       },
-    ]) {
-      expect(s.safeSerialize(obj)).toEqual(result);
-      expect(s.safeParse(obj)).toEqual(result);
+    ] as any[]) {
+      expect(s.safeSerialize(obj)).toEqual(result(s));
+      expect(s.safeParse(obj)).toEqual(result(s));
       expect(s.test(obj)).toBe(false);
     }
   });
 }
 
-test(`SealableTypes - Union`, () => {
+test(`Sealed - Union`, () => {
   const s = Sealed(Union(Object({ hello: String }), Object({ world: Number })));
   expect(s.safeParse({ hello: 'a' })).toEqual({
     success: true,
@@ -109,13 +134,554 @@ test(`SealableTypes - Union`, () => {
     success: true,
     value: { world: 42 },
   });
-  expect(s.safeParse({ hello: 'a', world: 42 })).toEqual({
-    message: 'Unexpected property on sealed object: world',
-    success: false,
-  });
+  expect(s.safeParse({ hello: 'a', world: 42 })).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {hello: \\"a\\", world: 42} to Sealed<{ hello: string; }> | Sealed<{ world: number; }>",
+        Array [
+          "Unable to assign {hello: \\"a\\", world: 42} to Sealed<{ hello: string; }>",
+          Array [
+            "Unexpected property on sealed object: \\"world\\"",
+          ],
+        ],
+        Array [
+          "And unable to assign {hello: \\"a\\", world: 42} to Sealed<{ world: number; }>",
+          Array [
+            "Unexpected property on sealed object: \\"hello\\"",
+          ],
+        ],
+      ],
+      "message": "Expected Sealed<{ hello: string; }> | Sealed<{ world: number; }>, but was {hello: \\"a\\", world: 42}",
+      "success": false,
+    }
+  `);
   expect(() => s.assert({ hello: 'a', world: 42 })).toThrowErrorMatchingInlineSnapshot(`
-"Unexpected properties on sealed object
-  Unexpected property: hello
-  Unexpected property: world"
+"Unable to assign {hello: \\"a\\", world: 42} to Sealed<{ hello: string; }> | Sealed<{ world: number; }>
+  Unable to assign {hello: \\"a\\", world: 42} to Sealed<{ hello: string; }>
+    Unexpected property on sealed object: \\"world\\"
+  And unable to assign {hello: \\"a\\", world: 42} to Sealed<{ world: number; }>
+    Unexpected property on sealed object: \\"hello\\""
 `);
+});
+
+test(`Sealed - Complex Union`, () => {
+  const s = Sealed(
+    Intersect(
+      Object({ hello: String }),
+      Union(
+        Object({ kind: Literal('rectangle'), height: Number, width: Number }),
+        Object({ kind: Literal('circle'), radius: Number }),
+        Intersect(Object({ kind: Literal('squirkle') }), Unknown),
+      ),
+      Object({ world: String }),
+    ),
+  );
+  expect(s.safeParse({ hello: 'a', world: 'b', kind: 'circle', radius: 42 })).toEqual({
+    success: true,
+    value: { hello: 'a', world: 'b', kind: 'circle', radius: 42 },
+  });
+  expect(s.safeParse({ hello: 'a', world: 'b', kind: 'circle', radius: 42, width: 5 }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {hello: \\"a\\", world: \\"b\\", kind: \\"circle\\" ... } to Sealed<{ kind: \\"rectangle\\"; height: number; width: number; }> | Sealed<{ kind: \\"circle\\"; radius: number; }> | ({ kind: \\"squirkle\\"; } & unknown)",
+        Array [
+          "Unable to assign {hello: \\"a\\", world: \\"b\\", kind: \\"circle\\" ... } to Sealed<{ kind: \\"circle\\"; radius: number; }>",
+          Array [
+            "Unexpected property on sealed object: \\"width\\"",
+          ],
+        ],
+      ],
+      "key": "<kind: \\"circle\\">.\\"width\\"",
+      "message": "Unexpected property on sealed object: \\"width\\"",
+      "success": false,
+    }
+  `);
+  expect(() => s.assert({ hello: 'a', world: 'b', kind: 'circle', radius: 42, width: 5 }))
+    .toThrowErrorMatchingInlineSnapshot(`
+"Unable to assign {hello: \\"a\\", world: \\"b\\", kind: \\"circle\\" ... } to Sealed<{ kind: \\"rectangle\\"; height: number; width: number; }> | Sealed<{ kind: \\"circle\\"; radius: number; }> | ({ kind: \\"squirkle\\"; } & unknown)
+  Unable to assign {hello: \\"a\\", world: \\"b\\", kind: \\"circle\\" ... } to Sealed<{ kind: \\"circle\\"; radius: number; }>
+    Unexpected property on sealed object: \\"width\\""
+`);
+
+  expect(s.safeParse({ hello: 'a', world: 'b', kind: 'squirkle', leftish: 10, upish: 14 })).toEqual(
+    {
+      success: true,
+      value: { hello: 'a', world: 'b', kind: 'squirkle', leftish: 10, upish: 14 },
+    },
+  );
+});
+
+test(`Sealed - Unbounded Union`, () => {
+  const s = Sealed(
+    Intersect(
+      Union(
+        Object({ kind: Literal('rectangle'), height: Number, width: Number }),
+        Object({ kind: Literal('circle'), radius: Number }),
+      ),
+      Unknown,
+    ),
+  );
+  expect(s.safeParse({ kind: 'circle', radius: 42, whatever: 'hello world' })).toEqual({
+    success: true,
+    value: {
+      kind: 'circle',
+      radius: 42,
+      whatever: 'hello world',
+    },
+  });
+});
+
+test(`Sealed - Intersected Unions`, () => {
+  const s = Sealed(
+    Intersect(
+      Union(
+        Object({ kind: Literal('rectangle'), height: Number, width: Number }),
+        Object({ kind: Literal('circle'), radius: Number }),
+      ),
+      Union(
+        Object({ dimension: Literal('2d') }),
+        Object({ dimension: Literal('3d'), zIndex: Number }),
+      ),
+    ),
+  );
+
+  // Valid inputs:
+  expect(s.safeParse({ kind: 'circle', radius: 42, dimension: '2d' })).toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "dimension": "2d",
+        "kind": "circle",
+        "radius": 42,
+      },
+    }
+  `);
+  expect(s.safeParse({ kind: 'circle', radius: 42, dimension: '3d', zIndex: 10 }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "dimension": "3d",
+        "kind": "circle",
+        "radius": 42,
+        "zIndex": 10,
+      },
+    }
+  `);
+
+  // Invalid inputs:
+  expect(s.safeParse({ kind: 'circle', radius: 42, dimension: '2d', zIndex: 10 }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {kind: \\"circle\\", radius: 42, dimension: \\"2d\\" ... } to Sealed<{ dimension: \\"2d\\"; }> | Sealed<{ dimension: \\"3d\\"; zIndex: number; }>",
+        Array [
+          "Unable to assign {kind: \\"circle\\", radius: 42, dimension: \\"2d\\" ... } to Sealed<{ dimension: \\"2d\\"; }>",
+          Array [
+            "Unexpected property on sealed object: \\"zIndex\\"",
+          ],
+        ],
+      ],
+      "key": "<dimension: \\"2d\\">.\\"zIndex\\"",
+      "message": "Unexpected property on sealed object: \\"zIndex\\"",
+      "success": false,
+    }
+  `);
+  expect(s.safeParse({ kind: 'rectangle', height: 42, width: 42, radius: 42, dimension: '2d' }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {kind: \\"rectangle\\", height: 42 ... } to Sealed<{ kind: \\"rectangle\\"; height: number; width: number; }> | Sealed<{ kind: \\"circle\\"; radius: number; }>",
+        Array [
+          "Unable to assign {kind: \\"rectangle\\", height: 42 ... } to Sealed<{ kind: \\"rectangle\\"; height: number; width: number; }>",
+          Array [
+            "Unexpected property on sealed object: \\"radius\\"",
+          ],
+        ],
+      ],
+      "key": "<kind: \\"rectangle\\">.\\"radius\\"",
+      "message": "Unexpected property on sealed object: \\"radius\\"",
+      "success": false,
+    }
+  `);
+});
+
+test(`Sealed - Intersected Unbounded Unions`, () => {
+  const s = Sealed(
+    Intersect(
+      Union(
+        Object({ kind: Literal('rectangle'), height: Number, width: Number }),
+        Object({ kind: Literal('circle'), radius: Number }),
+      ),
+      Union(
+        Object({ dimension: Literal('2d') }),
+        Intersect(Object({ dimension: Literal('3d') }), Unknown),
+      ),
+    ),
+  );
+
+  // Valid inputs:
+  expect(s.safeParse({ kind: 'circle', radius: 42, dimension: '2d' })).toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "dimension": "2d",
+        "kind": "circle",
+        "radius": 42,
+      },
+    }
+  `);
+  expect(s.safeParse({ kind: 'circle', radius: 42, dimension: '3d', zIndex: 10 }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "dimension": "3d",
+        "kind": "circle",
+        "radius": 42,
+        "zIndex": 10,
+      },
+    }
+  `);
+
+  // Invalid inputs:
+  expect(s.safeParse({ kind: 'circle', radius: 42, dimension: '2d', zIndex: 10 }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {kind: \\"circle\\", radius: 42, dimension: \\"2d\\" ... } to Sealed<{ dimension: \\"2d\\"; }> | ({ dimension: \\"3d\\"; } & unknown)",
+        Array [
+          "Unable to assign {kind: \\"circle\\", radius: 42, dimension: \\"2d\\" ... } to Sealed<{ dimension: \\"2d\\"; }>",
+          Array [
+            "Unexpected property on sealed object: \\"zIndex\\"",
+          ],
+        ],
+      ],
+      "key": "<dimension: \\"2d\\">.\\"zIndex\\"",
+      "message": "Unexpected property on sealed object: \\"zIndex\\"",
+      "success": false,
+    }
+  `);
+
+  // Extra valid input - we are not smart enough to detect that the
+  // 2d option in one union means the other union could stop being unbounded:
+  expect(s.safeParse({ kind: 'rectangle', height: 42, width: 42, radius: 42, dimension: '2d' }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "dimension": "2d",
+        "height": 42,
+        "kind": "rectangle",
+        "width": 42,
+      },
+    }
+  `);
+});
+
+test(`Sealed - Lazy Cycle`, () => {
+  interface T {
+    children: ({ value: string } | T)[];
+  }
+  const s: Codec<T> = Sealed(
+    Lazy(() => Object({ children: Array(Union(leaf, s)) })),
+    { deep: true },
+  );
+  const leaf = Object({ value: String });
+  expect(s.safeParse({ children: [{ value: 'a' }, { value: 'b' }] })).toEqual({
+    success: true,
+    value: { children: [{ value: 'a' }, { value: 'b' }] },
+  });
+});
+
+test(`Sealed - Deep`, () => {
+  expect(Sealed(Array(Object({ a: String }))).safeParse([{ a: 'A', b: 'B' }]))
+    .toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Array [
+        Object {
+          "a": "A",
+        },
+      ],
+    }
+  `);
+  expect(Sealed(Array(Object({ a: String })), { deep: true }).safeParse([{ a: 'A', b: 'B' }]))
+    .toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign [{a: \\"A\\", b: \\"B\\"}] to Sealed<{ a: string; }>[]",
+        Array [
+          "The types of [0] are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ a: string; }>",
+            Array [
+              "Unexpected property on sealed object: \\"b\\"",
+            ],
+          ],
+        ],
+      ],
+      "key": "[0].\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+  expect(
+    Sealed(ReadonlyArray(Object({ a: String })), { deep: true }).safeParse([{ a: 'A', b: 'B' }]),
+  ).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign [{a: \\"A\\", b: \\"B\\"}] to readonly Sealed<{ a: string; }>[]",
+        Array [
+          "The types of [0] are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ a: string; }>",
+            Array [
+              "Unexpected property on sealed object: \\"b\\"",
+            ],
+          ],
+        ],
+      ],
+      "key": "[0].\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+  expect(Sealed(Tuple(Object({ a: String }))).safeParse([{ a: 'A', b: 'B' }]))
+    .toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Array [
+        Object {
+          "a": "A",
+        },
+      ],
+    }
+  `);
+  expect(Sealed(Tuple(Object({ a: String })), { deep: true }).safeParse([{ a: 'A', b: 'B' }]))
+    .toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign [{a: \\"A\\", b: \\"B\\"}] to [Sealed<{ a: string; }>]",
+        Array [
+          "The types of [0] are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ a: string; }>",
+            Array [
+              "Unexpected property on sealed object: \\"b\\"",
+            ],
+          ],
+        ],
+      ],
+      "key": "[0].\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+  expect(
+    Sealed(ReadonlyTuple(Object({ a: String })), { deep: true }).safeParse([{ a: 'A', b: 'B' }]),
+  ).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign [{a: \\"A\\", b: \\"B\\"}] to readonly [Sealed<{ a: string; }>]",
+        Array [
+          "The types of [0] are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ a: string; }>",
+            Array [
+              "Unexpected property on sealed object: \\"b\\"",
+            ],
+          ],
+        ],
+      ],
+      "key": "[0].\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+
+  expect(Sealed(Record(String, Object({ a: String }))).safeParse({ x: { a: 'A', b: 'B' } }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "x": Object {
+          "a": "A",
+        },
+      },
+    }
+  `);
+  expect(
+    Sealed(Record(String, Object({ a: String })), { deep: true }).safeParse({
+      x: { a: 'A', b: 'B' },
+    }),
+  ).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "The types of x are not compatible",
+        Array [
+          "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ a: string; }>",
+          Array [
+            "Unexpected property on sealed object: \\"b\\"",
+          ],
+        ],
+      ],
+      "key": "x.\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+  expect(
+    Sealed(ReadonlyRecord(String, Object({ a: String })), { deep: true }).safeParse({
+      x: { a: 'A', b: 'B' },
+    }),
+  ).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "The types of x are not compatible",
+        Array [
+          "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ a: string; }>",
+          Array [
+            "Unexpected property on sealed object: \\"b\\"",
+          ],
+        ],
+      ],
+      "key": "x.\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+
+  expect(Sealed(Object({ x: Object({ a: String }) })).safeParse({ x: { a: 'A', b: 'B' } }))
+    .toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "x": Object {
+          "a": "A",
+        },
+      },
+    }
+  `);
+  expect(
+    Sealed(Object({ x: Object({ a: String }) }), { deep: true }).safeParse({
+      x: { a: 'A', b: 'B' },
+    }),
+  ).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {x: {a: \\"A\\", b: \\"B\\"}} to { x: Sealed<{ a: string; }>; }",
+        Array [
+          "The types of \\"x\\" are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ a: string; }>",
+            Array [
+              "Unexpected property on sealed object: \\"b\\"",
+            ],
+          ],
+        ],
+      ],
+      "key": "x.\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+  expect(
+    Sealed(Object({ x: ReadonlyObject({ a: String }) }), { deep: true }).safeParse({
+      x: { a: 'A', b: 'B' },
+    }),
+  ).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {x: {a: \\"A\\", b: \\"B\\"}} to { x: Sealed<{ readonly a: string; }>; }",
+        Array [
+          "The types of \\"x\\" are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: \\"B\\"} to Sealed<{ readonly a: string; }>",
+            Array [
+              "Unexpected property on sealed object: \\"b\\"",
+            ],
+          ],
+        ],
+      ],
+      "key": "x.\\"b\\"",
+      "message": "Unexpected property on sealed object: \\"b\\"",
+      "success": false,
+    }
+  `);
+
+  const deepParsed = Sealed(
+    Array(
+      Object({
+        a: String,
+        b: ParsedValue(Object({ x: Number }), {
+          parse({ x }) {
+            return { success: true, value: { x, y: x } };
+          },
+        }),
+      }),
+    ),
+    {
+      deep: true,
+    },
+  );
+  expect(deepParsed.safeParse([{ a: 'A', b: { x: 5 } }])).toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Array [
+        Object {
+          "a": "A",
+          "b": Object {
+            "x": 5,
+            "y": 5,
+          },
+        },
+      ],
+    }
+  `);
+  expect(deepParsed.safeParse([{ a: 'A', b: { x: 5, y: 10 } }])).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign [{a: \\"A\\", b: {x: 5, y: 10}}] to Sealed<{ a: string; b: ParsedValue<{ x: number; }>; }>[]",
+        Array [
+          "The types of [0] are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: {x: 5, y: 10}} to { a: string; b: Sealed<ParsedValue<{ x: number; }>>; }",
+            Array [
+              "The types of \\"b\\" are not compatible",
+              Array [
+                "Unable to assign {x: 5, y: 10} to Sealed<ParsedValue<{ x: number; }>>",
+                Array [
+                  "Unexpected property on sealed object: \\"y\\"",
+                ],
+              ],
+            ],
+          ],
+        ],
+      ],
+      "key": "[0].b.\\"y\\"",
+      "message": "Unexpected property on sealed object: \\"y\\"",
+      "success": false,
+    }
+  `);
+  expect(deepParsed.safeParse([{ a: 'A', b: { x: 5 }, c: 'C' }])).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign [{a: \\"A\\", b: {x: 5}, c: \\"C\\"}] to Sealed<{ a: string; b: ParsedValue<{ x: number; }>; }>[]",
+        Array [
+          "The types of [0] are not compatible",
+          Array [
+            "Unable to assign {a: \\"A\\", b: {x: 5}, c: \\"C\\"} to Sealed<{ a: string; b: ParsedValue<{ x: number; }>; }>",
+            Array [
+              "Unexpected property on sealed object: \\"c\\"",
+            ],
+          ],
+        ],
+      ],
+      "key": "[0].\\"c\\"",
+      "message": "Unexpected property on sealed object: \\"c\\"",
+      "success": false,
+    }
+  `);
 });

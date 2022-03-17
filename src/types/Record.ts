@@ -12,7 +12,7 @@ import { Literal } from './literal';
 import { Constraint } from './constraint';
 import { lazyValue } from './lazy';
 import { Union } from './union';
-import { expected, failure, Result } from '../result';
+import { expected, failure, Result, typesAreNotCompatible } from '../result';
 
 export type KeyRuntypeBaseWithoutUnion =
   | Pick<String, keyof RuntypeBase>
@@ -56,6 +56,15 @@ export interface ReadonlyRecord<K extends KeyRuntypeBase, V extends RuntypeBase<
   readonly isReadonly: true;
 }
 
+export function isRecordRuntype(
+  runtype: RuntypeBase,
+): runtype is
+  | Record<KeyRuntypeBase, RuntypeBase<unknown>>
+  | ReadonlyRecord<KeyRuntypeBase, RuntypeBase<unknown>> {
+  return (
+    'tag' in runtype && (runtype as Record<KeyRuntypeBase, RuntypeBase<unknown>>).tag === 'record'
+  );
+}
 /**
  * Construct a runtype for arbitrary dictionaries.
  */
@@ -103,6 +112,7 @@ export function Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
             if (!validated.success) {
               return failure(validated.message, {
                 key: validated.key ? `${k}.${validated.key}` : k,
+                fullError: typesAreNotCompatible(k, validated.fullError ?? [validated.message]),
               });
             }
             (placeholder as any)[keyValidation.value] = validated.value;

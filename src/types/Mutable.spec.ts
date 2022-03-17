@@ -21,8 +21,10 @@ test('Mutable(Record)', () => {
 
 test('Mutable(Object)', () => {
   const obj = ft.ReadonlyObject({ whatever: ft.Number });
+  expect(obj.isReadonly).toBe(true);
   ta.assert<ta.Equal<ReturnType<typeof obj['parse']>, { readonly whatever: number }>>();
   const rObj = ft.Mutable(obj);
+  expect(rObj.isReadonly).toBe(false);
   ta.assert<ta.Equal<ReturnType<typeof rObj['parse']>, { whatever: number }>>();
   expect(rObj.safeParse({ whatever: 2 })).toMatchInlineSnapshot(`
     Object {
@@ -32,6 +34,8 @@ test('Mutable(Object)', () => {
       },
     }
   `);
+  expect(obj.asPartial().isReadonly).toBe(true);
+  expect(rObj.asPartial().isReadonly).toBe(false);
 });
 
 test('Mutable(Tuple)', () => {
