@@ -164,7 +164,14 @@ export function InternalObject<O extends RecordFields, Part extends boolean, RO 
 function Obj<O extends RecordFields>(fields: O): Obj<O, false> {
   return InternalObject(fields, false, false);
 }
+export function ReadonlyObject<O extends RecordFields>(fields: O): Obj<O, true> {
+  return InternalObject(fields, false, true);
+}
 
 export function Partial<O extends RecordFields>(fields: O): Partial<O, false> {
   return InternalObject(fields, true, false);
+}
+
+export function ReadonlyPartial<O extends RecordFields>(fields: O): Partial<O, true> {
+  return InternalObject(fields, true, true);
 }

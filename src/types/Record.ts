@@ -121,3 +121,12 @@ export function Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
   );
   return runtype;
 }
+
+export function ReadonlyRecord<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>(
+  key: K,
+  value: V,
+): ReadonlyRecord<K, V> {
+  const record: any = Record(key, value);
+  record.isReadonly = true;
+  return record;
+}

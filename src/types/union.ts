@@ -31,6 +31,7 @@ import { Never } from '..';
 import showValue from '../showValue';
 import { isIntersectRuntype } from './intersect';
 import { isNamedRuntype } from './Named';
+import { isSealedRuntype } from './Sealed';
 
 export type StaticUnion<TAlternatives extends readonly RuntypeBase<unknown>[]> = {
   [key in keyof TAlternatives]: TAlternatives[key] extends RuntypeBase<unknown>
@@ -52,8 +53,9 @@ export function isUnionType(runtype: RuntypeBase): runtype is Union<RuntypeBase<
 function resolveUnderlyingType(runtype: RuntypeBase, mode: 'p' | 's' | 't'): RuntypeBase {
   if (isLazyRuntype(runtype)) return resolveUnderlyingType(runtype.underlying(), mode);
   if (isBrandRuntype(runtype)) return resolveUnderlyingType(runtype.entity, mode);
-  if (isConstraintRuntype(runtype)) return resolveUnderlyingType(runtype.underlying, mode);
-  if (isNamedRuntype(runtype)) return resolveUnderlyingType(runtype.underlying, mode);
+  if (isConstraintRuntype(runtype) || isNamedRuntype(runtype) || isSealedRuntype(runtype)) {
+    return resolveUnderlyingType(runtype.underlying, mode);
+  }
 
   if (mode === 'p' && isParsedValueRuntype(runtype))
     return resolveUnderlyingType(runtype.underlying, mode);

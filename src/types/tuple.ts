@@ -90,3 +90,11 @@ export function Tuple<
   );
   return result;
 }
+
+export function ReadonlyTuple<
+  T extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]] | readonly []
+>(...components: T): ReadonlyTuple<T> {
+  const tuple: any = Tuple(...components);
+  tuple.isReadonly = true;
+  return tuple;
+}

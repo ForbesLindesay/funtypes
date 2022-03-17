@@ -52,7 +52,7 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
               `${config.name || `ParsedValue<${show(underlying)}>`} does not support Runtype.test`,
             );
       },
-      s(value, _internalSerialize, _internalSerializeToPlaceholder) {
+      s(value, _internalSerialize, internalSerializeToPlaceholder) {
         if (!config.serialize) {
           return failure(
             `${
@@ -74,7 +74,7 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
           return serialized;
         }
 
-        return _internalSerializeToPlaceholder(underlying, serialized.value);
+        return internalSerializeToPlaceholder(underlying, serialized.value);
       },
     },
     {

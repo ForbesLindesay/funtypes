@@ -1,11 +1,28 @@
 {
   "name": "funtypes",
-  "version": "5.0.1",
+  "version": "0.0.0",
   "description": "Runtime validation for static types",
   "main": "./lib/index.js",
   "module": "./lib/index.mjs",
   "types": "./lib/index.d.ts",
   "sideEffects": false,
+  "exports": {
+    "./readonly": {
+      "types": "./lib/readonly.d.ts",
+      "import": "./lib/readonly.mjs",
+      "default": "./lib/readonly.js"
+    },
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.mjs",
+      "default": "./lib/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "readonly": ["lib/readonly.d.ts"]
+    }
+  },
   "scripts": {
     "postbuild": "tsc --noEmit && rimraf lib/**/*.spec.*",
     "build": "rollup -c",
