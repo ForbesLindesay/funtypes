@@ -25,7 +25,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [10.x, 12.x, 14.x]
+        node-version: [12.x, 14.x, 16.x]
         # typescript-version: ['4.0.2']
 
     steps:
