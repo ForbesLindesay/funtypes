@@ -20,8 +20,11 @@ export function Named<TUnderlying extends RuntypeBase<unknown>>(
   assertRuntype(underlying);
   const runtype: Named<TUnderlying> = create<Named<TUnderlying>>(
     'named',
-    (value, innerValidate) => {
-      return innerValidate(underlying as any, value);
+    {
+      p: (value, _innerValidate, innerValidateToPlaceholder) => {
+        return innerValidateToPlaceholder(underlying as any, value);
+      },
+      u: () => underlying,
     },
     {
       underlying,

@@ -1,3 +1,10 @@
+import { provideHelpers } from './runtype';
+import { Brand } from './types/brand';
+import { Constraint } from './types/constraint';
+import { Intersect } from './types/intersect';
+import { ParsedValue } from './types/ParsedValue';
+import { Union } from './types/union';
+
 export { AsyncContract } from './asynccontract';
 export { Contract } from './contract';
 export { assertType } from './assertType';
@@ -39,3 +46,11 @@ export { Union } from './types/union';
 export { Unknown } from './types/unknown';
 export { Brand } from './types/brand';
 export { ParsedValue } from './types/ParsedValue';
+
+provideHelpers({
+  Union,
+  Intersect,
+  Constraint,
+  Brand,
+  ParsedValue,
+});

@@ -30,7 +30,7 @@ export function AsyncContract<A extends [any, ...any[]] | [], Z>(
       }
       const visited: OpaqueVisitedState = createVisitedState();
       for (let i = 0; i < argTypes.length; i++) {
-        const result = innerValidate(argTypes[i], args[i], visited);
+        const result = innerValidate(argTypes[i], args[i], visited, false);
         if (result.success) {
           args[i] = result.value;
         } else {
@@ -46,7 +46,7 @@ export function AsyncContract<A extends [any, ...any[]] | [], Z>(
         );
       }
       return returnedPromise.then(value => {
-        const result = innerGuard(returnType, value, createGuardVisitedState());
+        const result = innerGuard(returnType, value, createGuardVisitedState(), false);
         if (result) {
           throw new ValidationError(result);
         }

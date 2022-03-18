@@ -76,7 +76,7 @@ export function Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
   const expectedBaseType = lazyValue(() => getExpectedBaseType(key));
   const runtype: Record<K, V> = create<Record<K, V>>(
     'record',
-    (x, innerValidate) => {
+    (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
       if (x === null || x === undefined || typeof x !== 'object') {
         return expected(runtype, x);
       }
@@ -95,20 +95,24 @@ export function Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
             let keyValidation: Result<string | number> | null = null;
             if (expectedBaseType() === 'number') {
               if (isNaN(+k)) return expected(`record key to be a number`, k);
-              keyValidation = innerValidate(key, +k);
+              keyValidation = innerValidate(key, +k, false);
             } else if (expectedBaseType() === 'string') {
-              keyValidation = innerValidate(key, k);
+              keyValidation = innerValidate(key, k, false);
             } else {
-              keyValidation = innerValidate(key, k);
+              keyValidation = innerValidate(key, k, false);
               if (!keyValidation.success && !isNaN(+k)) {
-                keyValidation = innerValidate(key, +k);
+                keyValidation = innerValidate(key, +k, false);
               }
             }
             if (!keyValidation.success) {
               return expected(`record key to be ${show(key)}`, k);
             }
 
-            const validated = innerValidate(value, (x as any)[k]);
+            const validated = innerValidate(
+              value,
+              (x as any)[k],
+              sealed && sealed.deep ? { deep: true } : false,
+            );
             if (!validated.success) {
               return failure(validated.message, {
                 key: validated.key ? `${k}.${validated.key}` : k,

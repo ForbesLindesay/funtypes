@@ -42,25 +42,28 @@ export function Constraint<
     Constraint<TUnderlying, TConstrained, TArgs>
   >(
     'constraint',
-    (value, innerValidate) => {
-      const name = options && options.name;
-      const validated = innerValidate(underlying, value);
+    {
+      p(value, innerValidate) {
+        const name = options && options.name;
+        const validated = innerValidate(underlying, value);
 
-      if (!validated.success) {
-        return validated;
-      }
+        if (!validated.success) {
+          return validated;
+        }
 
-      const result = constraint(validated.value as any);
-      if (!result || typeof result === 'string') {
-        const message =
-          typeof result === 'string'
-            ? result
-            : `${showValue(value)} failed ${name || 'constraint'} check`;
-        return failure(message, {
-          fullError: unableToAssign(value, runtype, message),
-        });
-      }
-      return success(validated.value as TConstrained);
+        const result = constraint(validated.value as any);
+        if (!result || typeof result === 'string') {
+          const message =
+            typeof result === 'string'
+              ? result
+              : `${showValue(value)} failed ${name || 'constraint'} check`;
+          return failure(message, {
+            fullError: unableToAssign(value, runtype, message),
+          });
+        }
+        return success(validated.value as TConstrained);
+      },
+      u: () => underlying,
     },
     {
       underlying,

@@ -27,8 +27,11 @@ export function Lazy<TUnderlying extends RuntypeBase<unknown>>(
 
   return create<Lazy<TUnderlying>>(
     'lazy',
-    (value, _innerValidate, innerValidateToPlaceholder) =>
-      innerValidateToPlaceholder(underlying(), value) as any,
+    {
+      p: (value, _innerValidate, innerValidateToPlaceholder) =>
+        innerValidateToPlaceholder(underlying(), value) as any,
+      u: underlying,
+    },
     {
       underlying,
       show(needsParens) {

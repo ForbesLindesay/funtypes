@@ -6,6 +6,7 @@ import {
   Codec,
   createValidationPlaceholder,
   assertRuntype,
+  SealedState,
 } from '../runtype';
 import show, { parenthesize } from '../show';
 
@@ -43,51 +44,79 @@ export function Intersect<
   assertRuntype(...intersectees);
   return create<Intersect<TIntersectees>>(
     'intersect',
-    (value, innerValidate) => {
-      if (Array.isArray(value)) {
-        return createValidationPlaceholder<any>([...value], placeholder => {
-          for (const targetType of intersectees) {
-            let validated = innerValidate(targetType, placeholder);
-            if (!validated.success) {
-              return validated;
+    {
+      p: (value, innerValidate, _innerValidateToPlaceholder, getFields, sealed) => {
+        const getSealed = sealed
+          ? (targetType: RuntypeBase): SealedState => {
+              const fields = new Set<string>();
+              for (const intersectee of intersectees) {
+                if (targetType !== intersectee) {
+                  const intersecteeFields = getFields(intersectee);
+                  if (intersecteeFields === undefined) return false;
+                  for (const f of intersecteeFields) {
+                    fields.add(f);
+                  }
+                }
+              }
+              return { keysFromIntersect: fields, deep: sealed.deep };
             }
-            if (!Array.isArray(validated.value)) {
-              return failure(
-                `The validator ${show(
-                  targetType,
-                )} attempted to convert the type of this value from an array to something else. That conversion is not valid as the child of an intersect`,
-              );
+          : (_i: RuntypeBase): SealedState => false;
+        if (Array.isArray(value)) {
+          return createValidationPlaceholder<any>([...value], placeholder => {
+            for (const targetType of intersectees) {
+              let validated = innerValidate(targetType, placeholder, getSealed(targetType));
+              if (!validated.success) {
+                return validated;
+              }
+              if (!Array.isArray(validated.value)) {
+                return failure(
+                  `The validator ${show(
+                    targetType,
+                  )} attempted to convert the type of this value from an array to something else. That conversion is not valid as the child of an intersect`,
+                );
+              }
+              placeholder.splice(0, placeholder.length, ...validated.value);
             }
-            placeholder.splice(0, placeholder.length, ...validated.value);
-          }
-        });
-      } else if (value && typeof value === 'object') {
-        return createValidationPlaceholder<any>(Object.create(null), placeholder => {
-          for (const targetType of intersectees) {
-            let validated = innerValidate(targetType, value);
-            if (!validated.success) {
-              return validated;
+          });
+        } else if (value && typeof value === 'object') {
+          return createValidationPlaceholder<any>(Object.create(null), placeholder => {
+            for (const targetType of intersectees) {
+              let validated = innerValidate(targetType, value, getSealed(targetType));
+              if (!validated.success) {
+                return validated;
+              }
+              if (!(validated.value && typeof validated.value === 'object')) {
+                return failure(
+                  `The validator ${show(
+                    targetType,
+                  )} attempted to convert the type of this value from an object to something else. That conversion is not valid as the child of an intersect`,
+                );
+              }
+              Object.assign(placeholder, validated.value);
             }
-            if (!(validated.value && typeof validated.value === 'object')) {
-              return failure(
-                `The validator ${show(
-                  targetType,
-                )} attempted to convert the type of this value from an object to something else. That conversion is not valid as the child of an intersect`,
-              );
-            }
-            Object.assign(placeholder, validated.value);
-          }
-        });
-      }
-      let result = value;
-      for (const targetType of intersectees) {
-        let validated = innerValidate(targetType, result);
-        if (!validated.success) {
-          return validated;
+          });
         }
-        result = validated.value;
-      }
-      return success(result);
+        let result = value;
+        for (const targetType of intersectees) {
+          let validated = innerValidate(targetType, result, getSealed(targetType));
+          if (!validated.success) {
+            return validated;
+          }
+          result = validated.value;
+        }
+        return success(result);
+      },
+      f: getFields => {
+        const fields = new Set<string>();
+        for (const i of intersectees) {
+          const iFields = getFields(i);
+          if (iFields === undefined) return undefined;
+          for (const f of iFields) {
+            fields.add(f);
+          }
+        }
+        return fields;
+      },
     },
     {
       intersectees,

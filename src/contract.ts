@@ -27,7 +27,7 @@ export function Contract<A extends [any, ...any[]] | [], Z>(
         });
       const visited: OpaqueVisitedState = createVisitedState();
       for (let i = 0; i < argTypes.length; i++) {
-        const result = innerValidate(argTypes[i], args[i], visited);
+        const result = innerValidate(argTypes[i], args[i], visited, false);
         if (result.success) {
           args[i] = result.value;
         } else {
@@ -35,7 +35,7 @@ export function Contract<A extends [any, ...any[]] | [], Z>(
         }
       }
       const rawResult = f(...args);
-      const result = innerGuard(returnType, rawResult, createGuardVisitedState());
+      const result = innerGuard(returnType, rawResult, createGuardVisitedState(), false);
       if (result) {
         throw new ValidationError(result);
       }

@@ -45,7 +45,7 @@ export function Tuple<
   assertRuntype(...components);
   const result = create<Tuple<T>>(
     'tuple',
-    (x, innerValidate) => {
+    (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
       if (!Array.isArray(x)) {
         return expected(`tuple to be an array`, x);
       }
@@ -58,7 +58,11 @@ export function Tuple<
         let fullError: FullError | undefined = undefined;
         let firstError: Failure | undefined;
         for (let i = 0; i < components.length; i++) {
-          let validatedComponent = innerValidate(components[i], x[i]);
+          let validatedComponent = innerValidate(
+            components[i],
+            x[i],
+            sealed && sealed.deep ? { deep: true } : false,
+          );
 
           if (!validatedComponent.success) {
             if (!fullError) {

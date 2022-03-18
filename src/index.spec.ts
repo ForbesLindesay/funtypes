@@ -839,7 +839,7 @@ function assertThrows<A>(value: unknown, runtype: Runtype<A>, error: string, key
   try {
     runtype.parse(value);
     fail('value passed validation even though it was not expected to');
-  } catch (exception) {
+  } catch (exception: any) {
     const { shortMessage: errorMessage, key: errorKey } = exception;
 
     expect(exception).toBeInstanceOf(ValidationError);

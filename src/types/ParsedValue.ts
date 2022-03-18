@@ -10,6 +10,7 @@ import {
   assertRuntype,
 } from '../runtype';
 import show from '../show';
+import { Never } from './never';
 
 export interface ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>
   extends Codec<TParsed> {
@@ -52,7 +53,7 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
               `${config.name || `ParsedValue<${show(underlying)}>`} does not support Runtype.test`,
             );
       },
-      s(value, _internalSerialize, internalSerializeToPlaceholder) {
+      s(value, _internalSerialize, internalSerializeToPlaceholder, _getFields, sealed) {
         if (!config.serialize) {
           return failure(
             `${
@@ -61,7 +62,7 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
           );
         }
         const testResult = config.test
-          ? innerGuard(config.test, value, createGuardVisitedState())
+          ? innerGuard(config.test, value, createGuardVisitedState(), sealed)
           : undefined;
 
         if (testResult) {
@@ -74,7 +75,17 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
           return serialized;
         }
 
-        return internalSerializeToPlaceholder(underlying, serialized.value);
+        return internalSerializeToPlaceholder(underlying, serialized.value, false);
+      },
+      u(mode) {
+        switch (mode) {
+          case 'p':
+            return underlying;
+          case 't':
+            return config.test ?? Never;
+          case 's':
+            return config.serialize ? config.test : Never;
+        }
       },
     },
     {
