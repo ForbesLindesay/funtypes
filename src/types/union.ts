@@ -137,7 +137,7 @@ function findDiscriminator<TResult>(
  * Construct a union runtype from runtypes for its alternatives.
  */
 export function Union<
-  TAlternatives extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]]
+  TAlternatives extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]],
 >(...alternatives: TAlternatives): Union<TAlternatives> {
   assertRuntype(...alternatives);
   type TResult = StaticUnion<TAlternatives>;

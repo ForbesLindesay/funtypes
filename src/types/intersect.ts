@@ -23,7 +23,7 @@ export type StaticIntersect<TIntersectees extends readonly RuntypeBase<unknown>[
   : never;
 
 export interface Intersect<
-  TIntersectees extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]]
+  TIntersectees extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]],
 > extends Codec<StaticIntersect<TIntersectees>> {
   readonly tag: 'intersect';
   readonly intersectees: TIntersectees;
@@ -41,7 +41,7 @@ export function isIntersectRuntype(
  * Construct an intersection runtype from runtypes for its alternatives.
  */
 export function Intersect<
-  TIntersectees extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]]
+  TIntersectees extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]],
 >(...intersectees: TIntersectees): Intersect<TIntersectees> {
   assertRuntype(...intersectees);
   const allFieldInfoForMode = (mode: 'p' | 't' | 's') => {

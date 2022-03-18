@@ -12,7 +12,7 @@
     "sourceMap": true,
     "outDir": "lib",
     "forceConsistentCasingInFileNames": true,
-    "experimentalDecorators": true,
+    "experimentalDecorators": true
   },
   "exclude": ["./lib/**/*", "./examples/**/*"]
 }

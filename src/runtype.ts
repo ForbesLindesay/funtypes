@@ -27,7 +27,8 @@ export function provideHelpers(h: Helpers) {
 
 export type InnerValidateHelper = <T>(runtype: RuntypeBase<T>, value: unknown) => Result<T>;
 declare const internalSymbol: unique symbol;
-const internal: typeof internalSymbol = ('__internal_runtype_methods__' as unknown) as typeof internalSymbol;
+const internal: typeof internalSymbol =
+  '__internal_runtype_methods__' as unknown as typeof internalSymbol;
 
 export function assertRuntype(...values: RuntypeBase[]) {
   for (const value of values) {
@@ -302,7 +303,7 @@ export function create<TConfig extends Codec<any>>(
         : internalImplementation,
   };
 
-  return (A as unknown) as TConfig;
+  return A as unknown as TConfig;
 
   function safeParse(x: any) {
     return innerValidate(A, x, createVisitedState(), false);

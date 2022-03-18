@@ -60,7 +60,7 @@ type Hand = { left: Hand } | { right: Hand };
 const Hand: Runtype<Hand> = Lazy(() =>
   Union(ObjectType({ left: Hand }), ObjectType({ right: Hand })),
 );
-const leftHand: Hand = { left: (null as any) as Hand };
+const leftHand: Hand = { left: null as any as Hand };
 const rightHand: Hand = { right: leftHand };
 leftHand.left = rightHand;
 
@@ -68,7 +68,7 @@ type Ambi = { left: Ambi } & { right: Ambi };
 const Ambi: Runtype<Ambi> = Lazy(() =>
   Intersect(ObjectType({ left: Ambi }), ObjectType({ right: Ambi })),
 );
-const ambi: Ambi = { left: (null as any) as Ambi, right: (null as any) as Ambi };
+const ambi: Ambi = { left: null as any as Ambi, right: null as any as Ambi };
 ambi.left = ambi;
 ambi.right = ambi;
 

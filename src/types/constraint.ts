@@ -9,7 +9,7 @@ export type ConstraintCheck<A extends RuntypeBase<unknown>> = (x: Static<A>) => 
 export interface Constraint<
   TUnderlying extends RuntypeBase<unknown>,
   TConstrained extends Static<TUnderlying> = Static<TUnderlying>,
-  TArgs = unknown
+  TArgs = unknown,
 > extends Codec<TConstrained> {
   readonly tag: 'constraint';
   readonly underlying: TUnderlying;
@@ -23,7 +23,7 @@ export interface Constraint<
 export function Constraint<
   TUnderlying extends RuntypeBase<unknown>,
   TConstrained extends Static<TUnderlying> = Static<TUnderlying>,
-  TArgs = unknown
+  TArgs = unknown,
 >(
   underlying: TUnderlying,
   constraint: ConstraintCheck<TUnderlying>,

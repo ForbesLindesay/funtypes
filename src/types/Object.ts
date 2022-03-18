@@ -15,7 +15,7 @@ export type RecordFields = { readonly [_: string]: RuntypeBase<unknown> };
 type RecordStaticType<
   O extends RecordFields,
   IsPartial extends boolean,
-  IsReadonly extends boolean
+  IsReadonly extends boolean,
 > = IsPartial extends false
   ? IsReadonly extends false
     ? { -readonly [K in keyof O]: Static<O[K]> }
@@ -27,7 +27,7 @@ type RecordStaticType<
 export interface InternalRecord<
   O extends RecordFields,
   IsPartial extends boolean,
-  IsReadonly extends boolean
+  IsReadonly extends boolean,
 > extends Codec<RecordStaticType<O, IsPartial, IsReadonly>> {
   readonly tag: 'object';
   readonly fields: O;
