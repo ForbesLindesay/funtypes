@@ -8,10 +8,6 @@ export interface Sealed<TUnderlying extends RuntypeBase<unknown>>
   readonly deep: boolean;
 }
 
-export function isSealedRuntype(runtype: RuntypeBase): runtype is Sealed<RuntypeBase> {
-  return 'tag' in runtype && (runtype as Sealed<RuntypeBase>).tag === 'sealed';
-}
-
 export interface SealedConfig {
   readonly deep?: boolean;
 }

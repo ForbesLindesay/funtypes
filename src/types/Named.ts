@@ -2,10 +2,6 @@ import { RuntypeBase, Static, create, Codec, assertRuntype } from '../runtype';
 
 export type ConstraintCheck<A extends RuntypeBase<unknown>> = (x: Static<A>) => boolean | string;
 
-export function isNamedRuntype(runtype: RuntypeBase): runtype is Named<RuntypeBase> {
-  return 'tag' in runtype && (runtype as Named<RuntypeBase>).tag === 'named';
-}
-
 export interface Named<TUnderlying extends RuntypeBase<unknown>>
   extends Codec<Static<TUnderlying>> {
   readonly tag: 'named';

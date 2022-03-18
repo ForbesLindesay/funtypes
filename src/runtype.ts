@@ -57,7 +57,7 @@ export interface InternalValidation<TParsed> {
       value: unknown,
       sealed?: SealedState,
     ) => ResultWithCycle<T>,
-    getFields: (runtype: RuntypeBase) => ReadonlySet<string> | undefined,
+    mode: 'p' | 's' | 't',
     sealed: SealedState,
   ): ResultWithCycle<TParsed>;
   /**
@@ -85,7 +85,7 @@ export interface InternalValidation<TParsed> {
       value: unknown,
       sealed?: SealedState,
     ) => ResultWithCycle<any>,
-    getFields: (runtype: RuntypeBase) => ReadonlySet<string> | undefined,
+    mode: 's',
     sealed: SealedState,
   ) => ResultWithCycle<any>;
   /**
@@ -98,9 +98,7 @@ export interface InternalValidation<TParsed> {
    * undefined to indicate that arbitrarily many fields are
    * possible.
    */
-  f?: (
-    getFields: (t: RuntypeBase) => ReadonlySet<string> | undefined,
-  ) => ReadonlySet<string> | undefined;
+  f?: (mode: 'p' | 't' | 's') => ReadonlySet<string> | undefined;
 }
 
 /**
@@ -508,7 +506,7 @@ function innerValidateToPlaceholder<T>(
     value,
     (t, v, s) => innerValidate(t, v, $visited, s ?? sealed),
     (t, v, s) => innerValidateToPlaceholder(t, v, $visited, s ?? sealed),
-    getFieldsFn('p'),
+    'p',
     sealed,
   );
   if (result.cycle) {
@@ -546,7 +544,7 @@ function innerSerializeToPlaceholder(
     value,
     (t, v, s) => innerSerialize(t, v, $visited, s ?? sealed),
     (t, v, s) => innerSerializeToPlaceholder(t, v, $visited, s ?? sealed),
-    getFieldsFn('s'),
+    's',
     sealed,
   );
   if (result.cycle) {
@@ -576,7 +574,7 @@ export function innerGuard(
     value,
     (t, v, s) => innerGuard(t, v, $visited, s ?? sealed) || success(v as any),
     (t, v, s) => innerGuard(t, v, $visited, s ?? sealed) || success(v as any),
-    getFieldsFn('t'),
+    't',
     sealed,
   );
   if (result.cycle) result = result.unwrap();
@@ -586,12 +584,10 @@ export function innerGuard(
 
 /**
  * Get the possible fields for a runtype
+ * Returns "undefined" if there can be arbitrary fields (e.g. Record<string, number>)
  */
-function getFieldsFn(mode: 'p' | 's' | 't') {
-  function getFields(t: RuntypeBase): ReadonlySet<string> | undefined {
-    const b = unwrapRuntype(t, mode);
-    const i = b[internal];
-    return i.f ? i.f(getFields) : undefined;
-  }
-  return getFields;
+export function getFields(t: RuntypeBase, mode: 'p' | 's' | 't'): ReadonlySet<string> | undefined {
+  const b = unwrapRuntype(t, mode);
+  const i = b[internal];
+  return i.f ? i.f(mode) : undefined;
 }

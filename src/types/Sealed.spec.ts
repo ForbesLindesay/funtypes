@@ -92,6 +92,7 @@ for (const t of SealableTypes) {
 
 test(`Sealed - Union`, () => {
   const s = Sealed(Union(Object({ hello: String }), Object({ world: Number })));
+  expect(showType(s)).toMatchInlineSnapshot(`"Sealed<{ hello: string; } | { world: number; }>"`);
   expect(s.safeParse({ hello: 'a' })).toEqual({
     success: true,
     value: { hello: 'a' },
@@ -649,5 +650,100 @@ test(`Sealed - Deep`, () => {
       "message": "Unexpected property: c",
       "success": false,
     }
+  `);
+
+  const unionParsed = Sealed(
+    Intersect(
+      Partial({ x: Number }),
+      Union(
+        ParsedValue(Object({ hello: String, world: String }), {
+          parse(value) {
+            return { success: true, value: { hello: value.hello } };
+          },
+        }),
+        Object({ hello: String }),
+      ),
+    ),
+  );
+
+  expect(unionParsed.safeParse({ hello: 'a' })).toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "hello": "a",
+      },
+    }
+  `);
+  expect(unionParsed.safeParse({ hello: 'a', world: 'b' })).toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "hello": "a",
+      },
+    }
+  `);
+  expect(unionParsed.safeParse({ hello: 'a', world: 'b', other: 'c' })).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {hello: \\"a\\", world: \\"b\\", other: \\"c\\"} to { x?: number; }",
+        Array [
+          "Unexpected property: other",
+        ],
+      ],
+      "key": "other",
+      "message": "Unexpected property: other",
+      "success": false,
+    }
+  `);
+
+  expect(unionParsed.safeSerialize({ hello: 'a' })).toMatchInlineSnapshot(`
+    Object {
+      "success": true,
+      "value": Object {
+        "hello": "a",
+      },
+    }
+  `);
+  expect(unionParsed.safeSerialize({ hello: 'a', world: 'b' } as any)).toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {hello: \\"a\\", world: \\"b\\"} to { x?: number; }",
+        Array [
+          "Unexpected property: world",
+        ],
+      ],
+      "key": "world",
+      "message": "Unexpected property: world",
+      "success": false,
+    }
+  `);
+  expect(unionParsed.safeSerialize({ hello: 'a', world: 'b', other: 'c' } as any))
+    .toMatchInlineSnapshot(`
+    Object {
+      "fullError": Array [
+        "Unable to assign {hello: \\"a\\", world: \\"b\\", other: \\"c\\"} to { x?: number; }",
+        Array [
+          "Unexpected property: world",
+        ],
+        Array [
+          "Unexpected property: other",
+        ],
+      ],
+      "key": "world",
+      "message": "Unexpected property: world",
+      "success": false,
+    }
+  `);
+
+  (unionParsed as any).assert({ hello: 'a' });
+  expect(() => unionParsed.assert({ hello: 'a', world: 'b' })).toThrowErrorMatchingInlineSnapshot(`
+    "Unable to assign {hello: \\"a\\", world: \\"b\\"} to { x?: number; }
+      Unexpected property: world"
+  `);
+  expect(() => unionParsed.assert({ hello: 'a', world: 'b', other: 'c' }))
+    .toThrowErrorMatchingInlineSnapshot(`
+    "Unable to assign {hello: \\"a\\", world: \\"b\\", other: \\"c\\"} to { x?: number; }
+      Unexpected property: world
+      Unexpected property: other"
   `);
 });

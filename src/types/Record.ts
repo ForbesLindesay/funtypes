@@ -56,15 +56,6 @@ export interface ReadonlyRecord<K extends KeyRuntypeBase, V extends RuntypeBase<
   readonly isReadonly: true;
 }
 
-export function isRecordRuntype(
-  runtype: RuntypeBase,
-): runtype is
-  | Record<KeyRuntypeBase, RuntypeBase<unknown>>
-  | ReadonlyRecord<KeyRuntypeBase, RuntypeBase<unknown>> {
-  return (
-    'tag' in runtype && (runtype as Record<KeyRuntypeBase, RuntypeBase<unknown>>).tag === 'record'
-  );
-}
 /**
  * Construct a runtype for arbitrary dictionaries.
  */

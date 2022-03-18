@@ -9,6 +9,7 @@ import {
   OpaqueVisitedState,
   assertRuntype,
   unwrapRuntype,
+  getFields,
 } from '../runtype';
 import show, { parenthesize } from '../show';
 import { LiteralValue, isLiteralRuntype } from './literal';
@@ -236,11 +237,9 @@ export function Union<
         }
         const resultWithoutKey = withoutKey(value, innerValidate);
         if (!resultWithoutKey.success) {
-          if (resultWithKey.fullError) {
-            resultWithoutKey.fullError!.push(andError(resultWithKey.fullError!));
-          } else {
-            resultWithoutKey.fullError!.push(andError(unableToAssign(value, `Object`)));
-          }
+          resultWithoutKey.fullError!.push(
+            andError(resultWithKey.fullError ?? unableToAssign(value, `Object`)),
+          );
         }
         return resultWithoutKey;
       };
@@ -256,6 +255,23 @@ export function Union<
     t: validatorOf('t'),
   }));
 
+  const getFieldsForMode = (mode: 'p' | 't' | 's') => {
+    const fields = new Set<string>();
+    for (const a of alternatives) {
+      const aFields = getFields(a, mode);
+      if (aFields === undefined) return undefined;
+      for (const f of aFields) {
+        fields.add(f);
+      }
+    }
+    return fields;
+  };
+  const fields = {
+    p: lazyValue(() => getFieldsForMode(`p`)),
+    t: lazyValue(() => getFieldsForMode(`t`)),
+    s: lazyValue(() => getFieldsForMode(`s`)),
+  };
+
   const runtype: Union<TAlternatives> = create<Union<TAlternatives>>(
     'union',
     {
@@ -269,17 +285,7 @@ export function Union<
         const result = innerValidator().s(value, (t, v) => visited(t, v) || success(v as any));
         return result.success ? undefined : result;
       },
-      f: getFields => {
-        const fields = new Set<string>();
-        for (const a of alternatives) {
-          const aFields = getFields(a);
-          if (aFields === undefined) return undefined;
-          for (const f of aFields) {
-            fields.add(f);
-          }
-        }
-        return fields;
-      },
+      f: mode => fields[mode](),
     },
     {
       alternatives: flatAlternatives as any,

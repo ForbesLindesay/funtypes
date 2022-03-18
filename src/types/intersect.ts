@@ -7,8 +7,10 @@ import {
   createValidationPlaceholder,
   assertRuntype,
   SealedState,
+  getFields,
 } from '../runtype';
 import show, { parenthesize } from '../show';
+import { lazyValue } from './lazy';
 
 // We use the fact that a union of functions is effectively an intersection of parameters
 // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
@@ -42,23 +44,52 @@ export function Intersect<
   TIntersectees extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]]
 >(...intersectees: TIntersectees): Intersect<TIntersectees> {
   assertRuntype(...intersectees);
+  const allFieldInfoForMode = (mode: 'p' | 't' | 's') => {
+    const intresecteesWithOwnFields = intersectees.map(intersectee => ({
+      i: intersectee,
+      f: getFields(intersectee, mode),
+    }));
+    const intersecteesWithOtherFields = new Map(
+      intersectees.map(intersectee => {
+        const allFields = new Set<string>();
+        for (const { i, f: fields } of intresecteesWithOwnFields) {
+          if (i !== intersectee) {
+            if (fields === undefined) return [intersectee, undefined] as const;
+            for (const field of fields) {
+              allFields.add(field);
+            }
+          }
+        }
+        return [intersectee, allFields] as const;
+      }),
+    );
+
+    const allFields = new Set<string>();
+    for (const { f: fields } of intresecteesWithOwnFields) {
+      if (fields === undefined) return { intersecteesWithOtherFields, allFields: undefined };
+      for (const field of fields) {
+        allFields.add(field);
+      }
+    }
+    return { intersecteesWithOtherFields, allFields };
+  };
+  // use lazy value here so that:
+  // 1. If this is never used in a `Sealed` context, we can skip evaluating it
+  // 2. Circular references using `Lazy` don't break.
+  const allFieldInfo = {
+    p: lazyValue(() => allFieldInfoForMode(`p`)),
+    t: lazyValue(() => allFieldInfoForMode(`t`)),
+    s: lazyValue(() => allFieldInfoForMode(`s`)),
+  };
   return create<Intersect<TIntersectees>>(
     'intersect',
     {
-      p: (value, innerValidate, _innerValidateToPlaceholder, getFields, sealed) => {
+      p: (value, innerValidate, _innerValidateToPlaceholder, mode, sealed) => {
         const getSealed = sealed
           ? (targetType: RuntypeBase): SealedState => {
-              const fields = new Set<string>();
-              for (const intersectee of intersectees) {
-                if (targetType !== intersectee) {
-                  const intersecteeFields = getFields(intersectee);
-                  if (intersecteeFields === undefined) return false;
-                  for (const f of intersecteeFields) {
-                    fields.add(f);
-                  }
-                }
-              }
-              return { keysFromIntersect: fields, deep: sealed.deep };
+              const i = allFieldInfo[mode]().intersecteesWithOtherFields.get(targetType);
+              if (i === undefined) return false;
+              else return { keysFromIntersect: i, deep: sealed.deep };
             }
           : (_i: RuntypeBase): SealedState => false;
         if (Array.isArray(value)) {
@@ -106,17 +137,7 @@ export function Intersect<
         }
         return success(result);
       },
-      f: getFields => {
-        const fields = new Set<string>();
-        for (const i of intersectees) {
-          const iFields = getFields(i);
-          if (iFields === undefined) return undefined;
-          for (const f of iFields) {
-            fields.add(f);
-          }
-        }
-        return fields;
-      },
+      f: mode => allFieldInfo[mode]().allFields,
     },
     {
       intersectees,

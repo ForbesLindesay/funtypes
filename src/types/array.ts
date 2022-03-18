@@ -31,12 +31,6 @@ interface Arr<E extends RuntypeBase<unknown> = RuntypeBase<unknown>> extends Cod
   asReadonly(): ReadonlyArray<E>;
 }
 
-export function isArrayRuntype(
-  runtype: RuntypeBase,
-): runtype is Arr<RuntypeBase> | ReadonlyArray<RuntypeBase> {
-  return 'tag' in runtype && (runtype as Arr<RuntypeBase>).tag === 'array';
-}
-
 /**
  * Construct an array runtype from a runtype for its elements.
  */
