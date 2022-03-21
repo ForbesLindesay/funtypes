@@ -10,6 +10,20 @@ coverage/
 # NPM stuff
 node_modules/
 npm-debug.log*
+.npmignore
 
 # Mac stuff
 .DS_Store
+
+.github
+.editorconfig
+.eslintrc
+.gitattributes
+.gitignore
+.prettierignore
+.prettierrc.yml
+.size-snapshot.json
+funtypes-0.0.0.tgz
+rollup.config.js
+tsconfig.json
+yarn.lock
