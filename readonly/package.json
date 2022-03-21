@@ -1,0 +1,12 @@
+{
+  "main": "../lib/readonly.js",
+  "module": "../lib/readonly.mjs",
+  "types": "../lib/readonly.d.ts",
+  "exports": {
+    ".": {
+      "types": "./../lib/readonly.d.ts",
+      "import": "./../lib/readonly.mjs",
+      "default": "./../lib/readonly.js"
+    }
+  }
+}
