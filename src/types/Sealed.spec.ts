@@ -737,13 +737,19 @@ test(`Sealed - Deep`, () => {
 
   (unionParsed as any).assert({ hello: 'a' });
   expect(() => unionParsed.assert({ hello: 'a', world: 'b' })).toThrowErrorMatchingInlineSnapshot(`
-    "Unable to assign {hello: \\"a\\", world: \\"b\\"} to { x?: number; }
-      Unexpected property: world"
+    "Unable to assign {hello: \\"a\\", world: \\"b\\"} to ParsedValue<{ hello: string; world: string; }> | { hello: string; }
+      Unable to assign {hello: \\"a\\", world: \\"b\\"} to ParsedValue<{ hello: string; world: string; }>
+        ParsedValue<{ hello: string; world: string; }> does not support Runtype.test
+      And unable to assign {hello: \\"a\\", world: \\"b\\"} to { hello: string; }
+        Unexpected property: world"
   `);
   expect(() => unionParsed.assert({ hello: 'a', world: 'b', other: 'c' }))
     .toThrowErrorMatchingInlineSnapshot(`
-    "Unable to assign {hello: \\"a\\", world: \\"b\\", other: \\"c\\"} to { x?: number; }
-      Unexpected property: world
-      Unexpected property: other"
+    "Unable to assign {hello: \\"a\\", world: \\"b\\", other: \\"c\\"} to ParsedValue<{ hello: string; world: string; }> | { hello: string; }
+      Unable to assign {hello: \\"a\\", world: \\"b\\", other: \\"c\\"} to ParsedValue<{ hello: string; world: string; }>
+        ParsedValue<{ hello: string; world: string; }> does not support Runtype.test
+      And unable to assign {hello: \\"a\\", world: \\"b\\", other: \\"c\\"} to { hello: string; }
+        Unexpected property: world
+        Unexpected property: other"
   `);
 });

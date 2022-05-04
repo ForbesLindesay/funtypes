@@ -10,6 +10,8 @@ import {
   Union,
   Tuple,
   Codec,
+  Sealed,
+  showError,
 } from '..';
 import show from '../show';
 import { InstanceOf } from './instanceof';
@@ -42,9 +44,9 @@ test('TrimmedString', () => {
   `);
 
   expect(() => TrimmedString.assert(' foo bar ')).toThrowErrorMatchingInlineSnapshot(`
-"Unable to assign \\" foo bar \\" to WithConstraint<string>
-  Expected the string to be trimmed, but this one has whitespace"
-`);
+    "Unable to assign \\" foo bar \\" to WithConstraint<string>
+      Expected the string to be trimmed, but this one has whitespace"
+  `);
   expect(() => TrimmedString.assert('foo bar')).not.toThrow();
 });
 
@@ -65,9 +67,9 @@ test('DoubledNumber', () => {
   `);
 
   expect(() => DoubledNumber.assert(11)).toThrowErrorMatchingInlineSnapshot(`
-"Unable to assign 11 to WithConstraint<number>
-  Expected an even number"
-`);
+    "Unable to assign 11 to WithConstraint<number>
+      Expected an even number"
+  `);
   expect(() => DoubledNumber.assert(12)).not.toThrow();
 
   expect(DoubledNumber.safeSerialize(10)).toMatchInlineSnapshot(`
@@ -98,9 +100,9 @@ test('DoubledNumber - 2', () => {
   `);
 
   expect(() => DoubledNumber.assert(11)).toThrowErrorMatchingInlineSnapshot(`
-"Unable to assign 11 to WithConstraint<number>
-  Expected an even number"
-`);
+    "Unable to assign 11 to WithConstraint<number>
+      Expected an even number"
+  `);
   expect(() => DoubledNumber.assert(12)).not.toThrow();
 
   expect(DoubledNumber.safeSerialize(10)).toMatchInlineSnapshot(`
@@ -180,10 +182,10 @@ test('Upgrade Example', () => {
   `);
   expect(() => Shape.serialize({ version: 1, size: 20 } as any))
     .toThrowErrorMatchingInlineSnapshot(`
-"Unable to assign {version: 1, size: 20} to { version: 2; width: number; height: number; }
-  The types of \\"version\\" are not compatible
-    Expected 2, but was 1"
-`);
+    "Unable to assign {version: 1, size: 20} to { version: 2; width: number; height: number; }
+      The types of \\"version\\" are not compatible
+        Expected 2, but was 1"
+  `);
 });
 
 test('URL', () => {
@@ -324,11 +326,11 @@ test('Handle Being Within Cycles', () => {
 
   expect(() => RecursiveType.assert(parsed)).not.toThrow();
   expect(() => RecursiveType.assert(serialized)).toThrowErrorMatchingInlineSnapshot(`
-"Unable to assign [\\" hello world \\", [\\" hello world \\" ... ]] to [TrimmedString, CIRCULAR tuple]
-  The types of [0] are not compatible
-    Unable to assign \\" hello world \\" to WithConstraint<string>
-      Expected the string to be trimmed, but this one has whitespace"
-`);
+    "Unable to assign [\\" hello world \\", [\\" hello world \\" ... ]] to [TrimmedString, CIRCULAR tuple]
+      The types of [0] are not compatible
+        Unable to assign \\" hello world \\" to WithConstraint<string>
+          Expected the string to be trimmed, but this one has whitespace"
+  `);
 });
 
 test('Handle Being Outside Cycles', () => {
@@ -368,10 +370,10 @@ test('Handle Being Outside Cycles', () => {
 
   expect(() => RecursiveType.assert(parsed)).not.toThrow();
   expect(() => RecursiveType.assert(serialized)).toThrowErrorMatchingInlineSnapshot(`
-"Unable to assign [\\"hello world\\", [\\"hello world\\" ... ]] to (CIRCULAR array)[]
-  The types of [0] are not compatible
-    Expected an Array, but was \\"hello world\\""
-`);
+    "Unable to assign [\\"hello world\\", [\\"hello world\\" ... ]] to (CIRCULAR array)[]
+      The types of [0] are not compatible
+        Expected an Array, but was \\"hello world\\""
+  `);
 });
 
 test('Handle Being Outside Cycles - objects', () => {
@@ -486,5 +488,136 @@ test('Fails when cycles modify types', () => {
         [Circular],
       ],
     }
+  `);
+});
+
+test('Handles partial tests on parse', () => {
+  // Result type doesn't support `undefined` when parsing
+  // but only because we haven't implemented that test
+  const ResultType = Sealed(
+    Union(
+      Object({ hello: Literal('world') }),
+      ParsedValue(Object({}), {
+        parse(_value) {
+          return { success: true, value: undefined };
+        },
+      }),
+    ),
+    { deep: true },
+  );
+  const JsonType = ParsedValue(String, {
+    test: ResultType,
+    parse(value) {
+      try {
+        return ResultType.safeParse(JSON.parse(value));
+      } catch (ex) {
+        return {
+          success: false,
+          message: `Expected a JSON string but got ${JSON.stringify(value)}`,
+        };
+      }
+    },
+    serialize(value) {
+      const r = ResultType.safeSerialize(value);
+      return r.success ? { success: true, value: JSON.stringify(r.value) } : r;
+    },
+  });
+  // The test supports { hello 'world' } as one of the values in the union
+  expect(() => ResultType.assert({ hello: 'world' })).not.toThrow();
+  expect(() => JsonType.assert({ hello: 'world' })).not.toThrow();
+
+  // although undefined can be returned from the "parse", it is not supported by the test,
+  // but this is only because it is not implemented
+  expect(() => ResultType.assert(undefined)).toThrowErrorMatchingInlineSnapshot(`
+    "Unable to assign undefined to { hello: \\"world\\"; } | ParsedValue<{}>
+      Unable to assign undefined to ParsedValue<{}>
+        ParsedValue<{}> does not support Runtype.test
+      And unable to assign undefined to Object"
+  `);
+  expect(() => JsonType.assert(undefined)).toThrowErrorMatchingInlineSnapshot(`
+    "Unable to assign undefined to { hello: \\"world\\"; } | ParsedValue<{}>
+      Unable to assign undefined to ParsedValue<{}>
+        ParsedValue<{}> does not support Runtype.test
+      And unable to assign undefined to Object"
+  `);
+
+  // We used Sealed, so extra properties are not allowed
+  expect(() => JsonType.assert({ hello: 'world', whatever: true }))
+    .toThrowErrorMatchingInlineSnapshot(`
+    "Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; } | ParsedValue<{}>
+      Unable to assign {hello: \\"world\\", whatever: true} to ParsedValue<{}>
+        ParsedValue<{}> does not support Runtype.test
+      And unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
+        Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
+          Unexpected property: whatever"
+  `);
+
+  // The basic parsing works
+  expect(JsonType.safeParse(`{"hello": "world"}`)).toEqual({
+    success: true,
+    value: { hello: 'world' },
+  });
+  // Parsing also works even if the test would fail because it is not
+  // implemented
+  expect(JsonType.safeParse(`{}`)).toEqual({
+    success: true,
+    value: undefined,
+  });
+
+  // We used Sealed, so extra properties are not allowed
+  expect(showError(JsonType.safeParse(`{"hello": "world", "whatever": true}`) as any))
+    .toMatchInlineSnapshot(`
+    "Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; } | ParsedValue<{}>
+      Unable to assign {hello: \\"world\\", whatever: true} to {}
+        Unexpected property: hello
+        Unexpected property: whatever
+      And unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
+        Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
+          Unexpected property: whatever"
+  `);
+
+  // We can serialize the normal object
+  expect(JsonType.safeSerialize({ hello: 'world' })).toEqual({
+    success: true,
+    value: `{"hello":"world"}`,
+  });
+  // We cannot serialize undefined because we didn't implement serialize for that value in the union
+  expect(JsonType.safeSerialize(undefined)).toEqual({
+    success: false,
+    message: 'Expected { hello: "world"; }, but was undefined',
+  });
+  // We used Sealed, so extra properties are not allowed
+  expect(showError(JsonType.safeSerialize({ hello: 'world', whatever: true } as any) as any))
+    .toMatchInlineSnapshot(`
+    "Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
+      Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
+        Unexpected property: whatever"
+  `);
+
+  // We still apply normal tests post-parse, so you can still use the `test` to add
+  // extra constraints
+  const evenString = ParsedValue(String, {
+    test: Number.withConstraint(
+      value => (value % 2 === 0 ? true : `Expected an even number but got ${value}`),
+      { name: `EvenNumber` },
+    ),
+    parse(value) {
+      if (!/^\d+$/.test(value)) {
+        return {
+          success: false,
+          message: `Expected an even integer but got ${JSON.stringify(value)}`,
+        };
+      }
+      return { success: true, value: parseInt(value, 10) };
+    },
+    name: `EvenString`,
+  });
+  expect(evenString.safeParse('10')).toEqual({
+    success: true,
+    value: 10,
+  });
+  expect(showError(evenString.safeParse('9') as any)).toMatchInlineSnapshot(`
+    "Unable to assign 9 to EvenNumber
+      Expected an even number but got 9"
   `);
 });

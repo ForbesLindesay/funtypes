@@ -4,10 +4,10 @@ import {
   Static,
   create,
   Codec,
-  innerGuard,
-  createGuardVisitedState,
   mapValidationPlaceholder,
   assertRuntype,
+  innerGuard,
+  createGuardVisitedState,
 } from '../runtype';
 import show from '../show';
 import { Never } from './never';
@@ -40,9 +40,11 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
           config.test,
         );
       },
-      t(value, internalTest) {
+      t(value, internalTest, _sealed, isOptionalTest) {
         return config.test
           ? internalTest(config.test, value)
+          : isOptionalTest
+          ? undefined
           : failure(
               `${config.name || `ParsedValue<${show(underlying)}>`} does not support Runtype.test`,
             );
@@ -56,7 +58,7 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
           );
         }
         const testResult = config.test
-          ? innerGuard(config.test, value, createGuardVisitedState(), sealed)
+          ? innerGuard(config.test, value, createGuardVisitedState(), sealed, true)
           : undefined;
 
         if (testResult) {
@@ -76,7 +78,7 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
           case 'p':
             return underlying;
           case 't':
-            return config.test ?? Never;
+            return config.test;
           case 's':
             return config.serialize ? config.test : Never;
         }

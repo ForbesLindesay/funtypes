@@ -282,7 +282,7 @@ export function Union<
         return innerValidator().s(value, visited);
       },
       t: (value, visited) => {
-        const result = innerValidator().s(value, (t, v) => visited(t, v) || success(v as any));
+        const result = innerValidator().t(value, (t, v) => visited(t, v) || success(v as any));
         return result.success ? undefined : result;
       },
       f: mode => fields[mode](),
