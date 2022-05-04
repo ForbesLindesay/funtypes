@@ -37,7 +37,7 @@ export function Contract<A extends [any, ...any[]] | [], Z>(
           }
         }
         const rawResult = f(...args);
-        const result = innerGuard(returnType, rawResult, createGuardVisitedState(), false);
+        const result = innerGuard(returnType, rawResult, createGuardVisitedState(), false, false);
         if (result) {
           throw new ValidationError(result);
         }

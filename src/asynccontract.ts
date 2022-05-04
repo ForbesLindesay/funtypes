@@ -48,7 +48,7 @@ export function AsyncContract<A extends [any, ...any[]] | [], Z>(
           );
         }
         return returnedPromise.then(value => {
-          const result = innerGuard(returnType, value, createGuardVisitedState(), false);
+          const result = innerGuard(returnType, value, createGuardVisitedState(), false, false);
           if (result) {
             throw new ValidationError(result);
           }

@@ -72,6 +72,7 @@ export interface InternalValidation<TParsed> {
       sealed?: SealedState,
     ) => Failure | undefined,
     sealed: SealedState,
+    isOptionalTest: boolean,
   ) => Failure | undefined;
   /**
    * serialize
@@ -262,7 +263,7 @@ export function create<TConfig extends Codec<any>>(
     ...config,
     tag,
     assert(x: any): asserts x is Static<TConfig> {
-      const validated = innerGuard(A, x, createGuardVisitedState(), false);
+      const validated = innerGuard(A, x, createGuardVisitedState(), false, false);
       if (validated) {
         throw new ValidationError(validated);
       }
@@ -320,7 +321,7 @@ export function create<TConfig extends Codec<any>>(
   }
 
   function test(x: any): x is Static<TConfig> {
-    const validated = innerGuard(A, x, createGuardVisitedState(), false);
+    const validated = innerGuard(A, x, createGuardVisitedState(), false, false);
     return validated === undefined;
   }
 }
@@ -390,7 +391,7 @@ export function mapValidationPlaceholder<T, S>(
     return (
       (result.success &&
         extraGuard &&
-        innerGuard(extraGuard, result.value, createGuardVisitedState(), false)) ||
+        innerGuard(extraGuard, result.value, createGuardVisitedState(), false, true)) ||
       result
     );
   }
@@ -430,11 +431,12 @@ function innerMapValidationPlaceholder(
         const guardFailure =
           unwrapResult.success &&
           extraGuard &&
-          innerGuard(extraGuard, unwrapResult.value, createGuardVisitedState(), false);
+          innerGuard(extraGuard, unwrapResult.value, createGuardVisitedState(), false, true);
         cache = guardFailure || unwrapResult;
       } else {
         const guardFailure =
-          extraGuard && innerGuard(extraGuard, result.value, createGuardVisitedState(), false);
+          extraGuard &&
+          innerGuard(extraGuard, result.value, createGuardVisitedState(), false, true);
         cache = guardFailure || result;
       }
 
@@ -560,6 +562,7 @@ export function innerGuard(
   value: any,
   $visited: OpaqueGuardVisitedState,
   sealed: SealedState,
+  isOptionalTest: boolean,
 ): Failure | undefined {
   const visited = unwrapGuardVisitedState($visited);
   const validator = targetType[internal];
@@ -569,12 +572,17 @@ export function innerGuard(
     visited.set(targetType, (visited.get(targetType) || new Set()).add(value));
   }
   if (validator.t) {
-    return validator.t(value, (t, v, s) => innerGuard(t, v, $visited, s ?? sealed), sealed);
+    return validator.t(
+      value,
+      (t, v, s) => innerGuard(t, v, $visited, s ?? sealed, isOptionalTest),
+      sealed,
+      isOptionalTest,
+    );
   }
   let result = validator.p(
     value,
-    (t, v, s) => innerGuard(t, v, $visited, s ?? sealed) || success(v as any),
-    (t, v, s) => innerGuard(t, v, $visited, s ?? sealed) || success(v as any),
+    (t, v, s) => innerGuard(t, v, $visited, s ?? sealed, isOptionalTest) || success(v as any),
+    (t, v, s) => innerGuard(t, v, $visited, s ?? sealed, isOptionalTest) || success(v as any),
     't',
     sealed,
   );
