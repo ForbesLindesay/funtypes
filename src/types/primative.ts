@@ -22,8 +22,12 @@ interface Sym extends Codec<symbol> {
   readonly tag: 'symbol';
 }
 
+export interface BigInt extends Codec<bigint> {
+  readonly tag: 'bigint';
+}
+
 function createPrimative<
-  TType extends 'boolean' | 'function' | 'number' | 'string' | 'symbol',
+  TType extends 'boolean' | 'function' | 'number' | 'string' | 'symbol' | 'bigint',
   TValue,
 >(type: TType): Codec<TValue> & { readonly tag: TType } {
   return create<Codec<TValue> & { readonly tag: TType }>(
@@ -61,3 +65,8 @@ export const String: String = createPrimative('string');
  */
 const Sym: Sym = createPrimative('symbol');
 export { Sym as Symbol };
+
+/**
+ * Validates that a value is a BigInt.
+ */
+export const BigInt: BigInt = createPrimative('bigint');
