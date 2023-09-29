@@ -6,7 +6,7 @@ Funtypes allow you to take values about which you have no assurances and check t
 This is done by means of composable type validators of primitives, literals, arrays, tuples, records, unions,
 intersections and more.
 
-[![Build Status](https://img.shields.io/github/workflow/status/ForbesLindesay/funtypes/Test/master?style=for-the-badge)](https://github.com/ForbesLindesay/funtypes/actions?query=workflow%3ATest+branch%3Amaster)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ForbesLindesay/funtypes/test.yml?event=push&style=for-the-badge)](https://github.com/ForbesLindesay/funtypes/actions?query=workflow%3ATest+branch%3Amaster)
 [![Coveralls github branch](https://img.shields.io/coveralls/github/ForbesLindesay/funtypes/master?color=brightgreen&style=for-the-badge)](https://coveralls.io/github/ForbesLindesay/funtypes)
 [![Rolling Versions](https://img.shields.io/badge/Rolling%20Versions-Enabled-brightgreen?style=for-the-badge)](https://rollingversions.com/ForbesLindesay/funtypes)
 [![NPM version](https://img.shields.io/npm/v/funtypes?style=for-the-badge)](https://www.npmjs.com/package/funtypes)
