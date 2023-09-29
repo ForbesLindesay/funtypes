@@ -35,7 +35,7 @@ export function Constraint<
   >(
     'constraint',
     {
-      p(value, innerValidate) {
+      p(value, innerValidate, _, mode) {
         const name = options && options.name;
         const validated = innerValidate(underlying, value);
 
@@ -43,7 +43,7 @@ export function Constraint<
           return validated;
         }
 
-        const result = constraint(validated.value as any);
+        const result = constraint(mode === 'p' ? (validated.value as any) : value);
         if (!result || typeof result === 'string') {
           const message =
             typeof result === 'string'
