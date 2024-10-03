@@ -8,7 +8,7 @@ import { Union } from './types/union';
 export { AsyncContract } from './asynccontract';
 export { Contract } from './contract';
 export { assertType } from './assertType';
-export type { Runtype, Codec, Static } from './runtype';
+export type { Runtype, RuntypeBase, Codec, Static } from './runtype';
 export type { Success, Failure, Result } from './result';
 export { showError } from './result';
 export { ValidationError } from './errors';
@@ -30,7 +30,6 @@ export {
 export { Record, Record as MutableRecord, ReadonlyRecord } from './types/Record';
 export { Tuple, Tuple as MutableTuple, ReadonlyTuple } from './types/tuple';
 
-// TODO: should we export StaticIntersect, StaticTuple, StaticUnion etc.
 export type { ConstraintCheck } from './types/constraint';
 export { Constraint, Guard } from './types/constraint';
 export { Enum } from './types/Enum';

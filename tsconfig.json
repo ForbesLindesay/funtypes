@@ -14,5 +14,5 @@
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true
   },
-  "exclude": ["./lib/**/*", "./examples/**/*"]
+  "exclude": ["./lib/**/*", "./examples/**/*", "./test-output/**/*"]
 }

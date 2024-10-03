@@ -41,7 +41,7 @@ const OUTPUTS = [
   {
     name: `test.cjs`,
     header: [
-      `const assert = require('assert');`,
+      `const { strictEqual } = require('assert');`,
       `const t = require('funtypes');`,
       `const r = require('funtypes/readonly');`,
     ],
@@ -49,7 +49,7 @@ const OUTPUTS = [
   {
     name: `test.mjs`,
     header: [
-      `import assert from 'assert';`,
+      `import { strictEqual } from 'assert';`,
       `import * as t from 'funtypes';`,
       `import * as r from 'funtypes/readonly';`,
     ],
@@ -58,14 +58,17 @@ const OUTPUTS = [
 
 const assertions = [
   ...[`Readonly`, `Object`, `Record`].flatMap(n => [
-    `assert(typeof t.${n} === 'function');`,
-    `assert(typeof r.${n} === 'function');`,
+    `strictEqual(typeof t.${n}, 'function', "${n} should be a function in the default 'funtypes' entrypoint");`,
+    `strictEqual(typeof r.${n}, 'function', "${n} should be a function in the 'funtypes/readonly' entrypoint");`,
   ]),
   ...[...mutableExports.value]
     .sort()
-    .map(n => `assert(t.${n} !== undefined && typeof t.${n} === typeof r.${n});`),
-  `assert(t.Object({}).isReadonly === false)`,
-  `assert(r.Object({}).isReadonly === true)`,
+    .flatMap(n => [
+      `strictEqual(t.${n} === undefined, false, "${n} should be exported in the default 'funtypes' entrypoint");`,
+      `strictEqual(typeof t.${n}, typeof r.${n}, "${n} should have the same type in both entrypoints");`,
+    ]),
+  `strictEqual(t.Object({}).isReadonly, false, "Object should not be readonly in the default 'funtypes' entrypoint");`,
+  `strictEqual(r.Object({}).isReadonly, true, "Object should be readonly in the 'funtypes/readonly' entrypoint");`,
 ];
 
 const dir = mkdtempSync(join(tmpdir(), `funtypes`));
@@ -82,12 +85,27 @@ mkdirSync(join(dir, `src`));
 writeFileSync(
   join(dir, `src`, `test.ts`),
   [
-    `const assert = require('assert');`,
+    `import { strictEqual } from 'assert';`,
     `import * as t from 'funtypes';`,
     `import * as r from 'funtypes/readonly';`,
     ``,
-    `const schemaA = t.Object({value: t.String});`,
-    `const schemaB = r.Object({value: t.String});`,
+    `export const schemaA = t.Object({value: t.String});`,
+    `export const schemaB = r.Object({value: t.String});`,
+    `export const schemaC = t.Named("MySchema",`,
+    `  t.Union(`,
+    `    t.Object({ kind: t.Literal("string"), value: t.String }),`,
+    `    t.Object({ kind: t.Literal("number"), value: t.Number }),`,
+    `  ),`,
+    `);`,
+    `export type schemaCType = t.Static<typeof schemaC>;`,
+    `export type schemaCTypeNotInferred = { kind: "string", value: string } | { kind: "number", value: number }`,
+    `export function doubleNumbers(value: schemaCTypeNotInferred): schemaCTypeNotInferred {`,
+    `  if (value.kind === "number") return { kind: "number", value: value.value * 2 };`,
+    `  return value;`,
+    `}`,
+    `export function doubleNumbersX(value: unknown): schemaCTypeNotInferred {`,
+    `  return doubleNumbers(schemaC.parse(value));`,
+    `}`,
     ``,
     `const valueA = schemaA.parse({value: 'hello world'});`,
     `valueA.value = 'updated value';`,
@@ -100,24 +118,9 @@ writeFileSync(
     ``,
     ...assertions,
     ``,
-    `console.log("✅ TypeScript Import Tests Passed")`,
+    'console.log(`✅ TypeScript Import Tests Passed ${process.argv[2]}`)',
     ``,
   ].join(`\n`),
-);
-
-writeFileSync(
-  join(dir, `tsconfig.json`),
-  JSON.stringify({
-    compilerOptions: {
-      module: 'CommonJS',
-      outDir: 'lib',
-      noImplicitAny: true,
-      skipLibCheck: false,
-      strict: true,
-      isolatedModules: true,
-    },
-    include: ['src'],
-  }) + `\n`,
 );
 
 writeFileSync(
@@ -126,8 +129,8 @@ writeFileSync(
     name: 'funtypes-test-import',
     private: true,
     dependencies: {
-      '@types/node': '^17.0.21',
-      typescript: '4.0.2',
+      '@types/node': '^22.7.4',
+      typescript: '5.6.2',
     },
     scripts: {
       typecheck: 'tsc --build',
@@ -150,10 +153,61 @@ for (const { name } of OUTPUTS) {
   inheritExit(spawnSync(`node`, [join(dir, name)], { cwd: dir, stdio: `inherit` }));
 }
 
-console.info(`$ npm run typecheck`);
-inheritExit(spawnSync(`npm`, [`run`, `typecheck`], { cwd: dir, stdio: `inherit` }));
-console.info(`$ node lib/test.js`);
-inheritExit(spawnSync(`node`, [`lib/test.js`], { cwd: dir, stdio: `inherit` }));
+const modes = [
+  { module: 'commonjs', type: 'commonjs' },
+  { module: 'nodenext', type: 'module' },
+  { module: 'preserve', type: 'module' },
+];
+for (const mode of modes) {
+  writeFileSync(
+    join(dir, `tsconfig.json`),
+    JSON.stringify({
+      compilerOptions: {
+        module: mode.module,
+        outDir: 'lib',
+        noImplicitAny: true,
+        skipLibCheck: false,
+        strict: true,
+        isolatedModules: true,
+        declaration: true,
+      },
+      include: ['src'],
+    }) + `\n`,
+  );
+
+  writeFileSync(
+    join(dir, `package.json`),
+    JSON.stringify({
+      name: 'funtypes-test-import',
+      private: true,
+      type: mode.type,
+      dependencies: {
+        '@types/node': '^17.0.21',
+        typescript: '4.0.2',
+      },
+      scripts: {
+        typecheck: 'tsc --build',
+      },
+    }) + `\n`,
+  );
+
+  console.info(`$ npm run typecheck`);
+  inheritExit(spawnSync(`npm`, [`run`, `typecheck`], { cwd: dir, stdio: `inherit` }));
+  console.info(`$ node lib/test.js`);
+  inheritExit(
+    spawnSync(`node`, [`lib/test.js`, `${mode.module}/${mode.type}`], {
+      cwd: dir,
+      stdio: `inherit`,
+    }),
+  );
+  mkdirSync(`test-output/${mode.module}-${mode.type}`, { recursive: true });
+  for (const file of [`test.js`, `test.d.ts`]) {
+    writeFileSync(
+      `test-output/${mode.module}-${mode.type}/${file}`,
+      readFileSync(join(dir, `lib`, file), `utf8`),
+    );
+  }
+}
 
 function inheritExit(proc) {
   if (proc.status !== 0) process.exit(proc.status);
