@@ -1,4 +1,3 @@
-import { sizeSnapshot } from 'rollup-plugin-size-snapshot';
 import typescript from 'rollup-plugin-typescript2';
 import { terser } from 'rollup-plugin-terser';
 import prettier from 'rollup-plugin-prettier';
@@ -7,7 +6,6 @@ import pkg from './package.json';
 export default {
   input: {
     index: 'src/index.ts',
-    readonly: 'src/readonly.ts',
   },
   output: [
     {
@@ -50,6 +48,5 @@ export default {
       singleQuote: false,
       parser: 'babel',
     }),
-    sizeSnapshot(),
   ],
 };

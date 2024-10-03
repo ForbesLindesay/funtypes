@@ -32,28 +32,7 @@ function getExports(filename) {
   return { filename, value: new Set(exports.value), type: new Set(exports.type) };
 }
 
-let foundMissingExport = false;
-function compare(a, b, exportKind) {
-  for (const e of a[exportKind]) {
-    if (!b[exportKind].has(e)) {
-      console.error(
-        `${exportKind} export ${JSON.stringify(e)} is in ${a.filename} but not ${b.filename}`,
-      );
-      foundMissingExport = true;
-    }
-  }
-}
-const readOnlyExports = getExports(`src/readonly.ts`);
 const mutableExports = getExports(`src/index.ts`);
-
-compare(mutableExports, readOnlyExports, `value`);
-compare(mutableExports, readOnlyExports, `type`);
-compare(readOnlyExports, mutableExports, `value`);
-compare(readOnlyExports, mutableExports, `type`);
-
-if (foundMissingExport) {
-  process.exit(1);
-}
 
 console.info(`$ npm pack`);
 inheritExit(spawnSync(`npm`, [`pack`], { cwd: join(__dirname, `..`), stdio: `inherit` }));
