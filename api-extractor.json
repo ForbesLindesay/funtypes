@@ -1,0 +1,29 @@
+{
+  "mainEntryPointFilePath": "<projectFolder>/lib/index.d.ts",
+  "apiReport": {
+    // turn off
+    "enabled": false
+  },
+  "docModel": {
+    // turn off
+    "enabled": false
+  },
+  "dtsRollup": {
+    // Whether to generate the .d.ts rollup file.
+    "enabled": true,
+    // Where we wanna create our .d.ts rollup
+    "untrimmedFilePath": "<projectFolder>/dist/index.d.ts"
+  },
+  "messages": {
+    // turn off various warnings, that might not be useful right now
+    // check the official docs for more!
+    "extractorMessageReporting": {
+      "default": {
+        "logLevel": "none"
+      },
+      "ae-forgotten-export": {
+        "logLevel": "none"
+      }
+    }
+  }
+}
