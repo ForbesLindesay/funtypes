@@ -15,7 +15,7 @@
     "untrimmedFilePath": "<projectFolder>/dist/index.d.ts"
   },
   "messages": {
-    // turn off various warnings, that might not be useful right now 
+    // turn off various warnings, that might not be useful right now
     // check the official docs for more!
     "extractorMessageReporting": {
       "default": {

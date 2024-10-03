@@ -7,21 +7,17 @@ process.on('unhandledRejection', err => {
   throw err;
 });
 
-const { exec, execSync } = require('child_process');
-const { join } = require('path');
-
-const npmBinPath = execSync('npm bin').toString().trim();
+const { spawn } = require('child_process');
 
 const command = [
-  join(npmBinPath, 'prettier'),
+  'prettier',
   process.env.CI ? '--list-different' : '--write',
-  '"./**/*.{ts,tsx,js,json,css}"',
+  './**/*.{ts,tsx,js,json,css}',
 ];
 
-exec(command.join(' '), (error, stdout) => {
-  if (error) {
-    console.error('Found formatting issues in:\n');
-    console.error(stdout);
+spawn(`yarn`, command, { stdio: 'inherit' }).on('exit', exitCode => {
+  if (exitCode) {
+    console.error('Found formatting issues');
     console.error('Looks like someone forgot to run `yarn format` before pushing 😱');
     process.exit(1);
   }
