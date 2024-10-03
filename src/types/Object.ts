@@ -12,17 +12,29 @@ import { Failure } from '..';
 import { expected, failure, FullError, typesAreNotCompatible, unableToAssign } from '../result';
 
 export type RecordFields = { readonly [_: string]: RuntypeBase<unknown> };
+type MutableRecordStaticType<O extends RecordFields> = {
+  -readonly [K in keyof O]: Static<O[K]>;
+};
+type ReadonlyRecordStaticType<O extends RecordFields> = {
+  readonly [K in keyof O]: Static<O[K]>;
+};
+type PartialMutableRecordStaticType<O extends RecordFields> = {
+  -readonly [K in keyof O]?: Static<O[K]>;
+};
+type PartialReadonlyRecordStaticType<O extends RecordFields> = {
+  readonly [K in keyof O]?: Static<O[K]>;
+};
 type RecordStaticType<
   O extends RecordFields,
   IsPartial extends boolean,
   IsReadonly extends boolean,
 > = IsPartial extends false
   ? IsReadonly extends false
-    ? { -readonly [K in keyof O]: Static<O[K]> }
-    : { readonly [K in keyof O]: Static<O[K]> }
+    ? MutableRecordStaticType<O>
+    : ReadonlyRecordStaticType<O>
   : IsReadonly extends false
-  ? { -readonly [K in keyof O]?: Static<O[K]> }
-  : { readonly [K in keyof O]?: Static<O[K]> };
+  ? PartialMutableRecordStaticType<O>
+  : PartialReadonlyRecordStaticType<O>;
 
 export interface InternalRecord<
   O extends RecordFields,

@@ -326,12 +326,12 @@ export function create<TConfig extends Codec<any>>(
   }
 }
 
-export type Cycle<T> = {
+export interface Cycle<T> {
   success: true;
   cycle: true;
   placeholder: Partial<T>;
   unwrap: () => Result<T>;
-};
+}
 
 function attemptMixin<T>(placeholder: any, value: T): Result<T> {
   if (placeholder === value) {

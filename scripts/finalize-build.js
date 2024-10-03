@@ -64,15 +64,43 @@ for (const exportName of baseModule.all) {
 }
 types.push(`} from "./index";`, ``);
 
-writeFileSync(`lib/index.d.ts`, readFileSync(`dist/index.d.ts`, `utf8`));
 writeFileSync(`lib/readonly.js`, commonJs.join(`\n`));
 writeFileSync(`lib/readonly.mjs`, esModule.join(`\n`));
 writeFileSync(`lib/readonly.d.ts`, types.join(`\n`));
 
+const typesSrc = readFileSync(`dist/index.d.ts`, `utf8`).replace(/\r\n/g, '\n').split('\n');
+const aliasedTypes = new Set();
+for (const line of typesSrc) {
+  const match = /^export *\{ *([A-Za-z0-9_]+)(?: +as +[A-Za-z0-9_]+)? *\}$/.exec(line);
+  if (match) {
+    aliasedTypes.add(match[1]);
+  }
+}
+const internalTypePrefix = [
+  `/**`,
+  ` * This is an internal type that should not be referenced directly from outside of the funtypes package.`,
+  ` * @internal`,
+  ` */`,
+];
+writeFileSync(
+  `lib/index.d.ts`,
+  typesSrc
+    .map(line => {
+      const match = /^declare (?:(?:type)|(?:interface)) ([A-Za-z0-9_]+)[ <]/.exec(line);
+      if (match && !aliasedTypes.has(match[1])) {
+        return `${internalTypePrefix.join(`\n`)}\nexport ${line}`;
+      }
+      return line;
+    })
+    .join('\n'),
+);
+
 rmSync(`dist`, { recursive: true, force: true });
 
 const ALLOWED_FILES = new Set(
-  [`index`, `readonly`].flatMap(name => [`.js`, `.mjs`, `.d.ts`].map(ext => `${name}${ext}`)),
+  JSON.parse(readFileSync(`package.json`, `utf8`))
+    .files.filter(f => f.startsWith('lib/'))
+    .map(f => f.substring('lib/'.length)),
 );
 
 readdirSync(`lib`).forEach(f => {

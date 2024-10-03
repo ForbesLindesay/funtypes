@@ -5,6 +5,15 @@
   "main": "./lib/index.js",
   "module": "./lib/index.mjs",
   "types": "./lib/index.d.ts",
+  "files": [
+    "lib/index.js",
+    "lib/index.d.ts",
+    "lib/index.mjs",
+    "lib/readonly.js",
+    "lib/readonly.d.ts",
+    "lib/readonly.mjs",
+    "readonly/package.json"
+  ],
   "sideEffects": false,
   "exports": {
     "./readonly": {
