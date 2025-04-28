@@ -218,26 +218,7 @@ export function Union<
           return result;
         }
 
-        let fullError: FullError | undefined;
-        for (const targetType of validator) {
-          const result = innerValidate(targetType, value);
-          if (result.success) {
-            return result;
-          }
-          if (!fullError) {
-            fullError = unableToAssign(
-              value,
-              runtype,
-              result.fullError || unableToAssign(value, targetType, result),
-            );
-          } else {
-            fullError.push(andError(result.fullError || unableToAssign(value, targetType, result)));
-          }
-        }
-
-        return expected(runtype, value, {
-          fullError,
-        });
+        return validateWithoutKeyInner(validator, value, innerValidate);
       } else {
         const err = expected(
           Array.from(types.keys())
@@ -258,29 +239,34 @@ export function Union<
     };
   }
 
-  function validateWithoutKey(alternatives: readonly RuntypeBase<TResult>[]): InnerValidate {
-    return (value, innerValidate) => {
-      let fullError: FullError | undefined;
-      for (const targetType of alternatives) {
-        const result = innerValidate(targetType, value);
-        if (result.success) {
-          return result as Result<TResult>;
-        }
-        if (!fullError) {
-          fullError = unableToAssign(
-            value,
-            runtype,
-            result.fullError || unableToAssign(value, targetType, result),
-          );
-        } else {
-          fullError.push(andError(result.fullError || unableToAssign(value, targetType, result)));
-        }
+  function validateWithoutKeyInner(
+    alternatives: readonly RuntypeBase<TResult>[],
+    value: any,
+    innerValidate: InnerValidateHelper,
+  ): Result<TResult> {
+    let fullError: FullError | undefined;
+    for (const targetType of alternatives) {
+      const result = innerValidate(targetType, value);
+      if (result.success) {
+        return result as Result<TResult>;
       }
+      if (!fullError) {
+        fullError = unableToAssign(
+          value,
+          runtype,
+          result.fullError || unableToAssign(value, targetType, result),
+        );
+      } else {
+        fullError.push(andError(result.fullError || unableToAssign(value, targetType, result)));
+      }
+    }
 
-      return expected(runtype, value, {
-        fullError,
-      });
-    };
+    return expected(runtype, value, {
+      fullError,
+    });
+  }
+  function validateWithoutKey(alternatives: readonly RuntypeBase<TResult>[]): InnerValidate {
+    return (value, innerValidate) => validateWithoutKeyInner(alternatives, value, innerValidate);
   }
   function validateOnlyOption(innerType: RuntypeBase<TResult>): InnerValidate {
     return (value, innerValidate) => innerValidate(innerType, value);
