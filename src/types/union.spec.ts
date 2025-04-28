@@ -838,6 +838,12 @@ describe('union', () => {
         }),
       ),
     );
+    expect(Circle.parse({ type: 'CIRCLE', version: 2, radius: 42, color: 'red' })).toEqual({
+      type: 'CIRCLE',
+      version: 2,
+      radius: 42,
+      color: 'red',
+    });
     expect(() => Circle.parse({ type: 'CIRCLE', version: 2, radius: 42 }))
       .toThrowErrorMatchingInlineSnapshot(`
       "Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"CIRCLE\\"; version: 1; radius: number; } | { type: \\"CIRCLE\\"; version: 2; radius: number; color: string; }
@@ -867,6 +873,21 @@ describe('union', () => {
         color: String,
       }),
     );
+    expect(MyUnion.parse({ type: 'SQUARE', version: 2, size: 42, color: 'red' })).toEqual({
+      type: 'SQUARE',
+      version: 2,
+      size: 42,
+      color: 'red',
+    });
+    expect(MyUnion.parse({ type: 'CIRCLE', version: 2, radius: 42, color: 'red' })).toEqual({
+      type: 'CIRCLE',
+      version: 2,
+      radius: 42,
+      color: 'red',
+    });
+    expect(
+      MyUnion.parse({ type: 'RECTANGLE', version: 1, width: 42, height: 8, color: 'red' }),
+    ).toEqual({ type: 'RECTANGLE', version: 1, width: 42, height: 8, color: 'red' });
     expect(() => MyUnion.assert({ type: 'RECTANGLE', version: 1, width: 10, height: 20 }))
       .toThrowErrorMatchingInlineSnapshot(`
       "Unable to assign {type: \\"RECTANGLE\\", version: 1 ... } to { type: \\"SQUARE\\"; version: 1; size: number; } | { type: \\"SQUARE\\"; version: 2; size: number; color: string; } | Circle | { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }

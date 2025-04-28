@@ -311,6 +311,25 @@ test('serialize can return an error', () => {
   `);
 });
 
+test('serialize returns an error if not implemented', () => {
+  const URLString = ParsedValue(String, {
+    parse(value) {
+      try {
+        return { success: true, value: new URL(value) };
+      } catch (ex) {
+        return { success: false, message: `Expected a valid URL but got '${value}'` };
+      }
+    },
+  });
+
+  expect(URLString.safeSerialize(new URL('https://example.com'))).toMatchInlineSnapshot(`
+    Object {
+      "message": "ParsedValue<string> does not support Runtype.serialize",
+      "success": false,
+    }
+  `);
+});
+
 test('Handle Being Within Cycles', () => {
   const TrimmedString = ParsedValue(String, {
     name: 'TrimmedString',
