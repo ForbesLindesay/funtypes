@@ -1,4 +1,4 @@
-import { Array, Union, String, Literal, Object, Number, InstanceOf, Tuple } from '..';
+import { Array, Union, String, Literal, Object, Number, InstanceOf, Tuple, Never, Named } from '..';
 import { Null } from './literal';
 
 const ThreeOrString = Union(Literal(3), String);
@@ -386,15 +386,15 @@ describe('union', () => {
       `);
 
       expect(() => extract([2, { size: 20 } as any])).toThrowErrorMatchingInlineSnapshot(`
-"Unable to assign [2, {size: 20}] to [1, { size: number; }] | [2, { width: number; height: number; }]
-  Unable to assign [2, {size: 20}] to [2, { width: number; height: number; }]
-    The types of [1] are not compatible
-      Unable to assign {size: 20} to { width: number; height: number; }
-        The types of \\"width\\" are not compatible
-          Expected number, but was undefined
-        The types of \\"height\\" are not compatible
-          Expected number, but was undefined"
-`);
+        "Unable to assign [2, {size: 20}] to [1, { size: number; }] | [2, { width: number; height: number; }]
+          Unable to assign [2, {size: 20}] to [2, { width: number; height: number; }]
+            The types of [1] are not compatible
+              Unable to assign {size: 20} to { width: number; height: number; }
+                The types of \\"width\\" are not compatible
+                  Expected number, but was undefined
+                The types of \\"height\\" are not compatible
+                  Expected number, but was undefined"
+      `);
     });
     it('should handle branded tags', () => {
       const Version1 = Tuple(Literal(1).withBrand('version'), Object({ size: Number }));
@@ -796,6 +796,150 @@ describe('union', () => {
         "message": "Expected { key: { value: string; }; body: string[]; } | { key: { value: number; }; body: string[]; }, but was {key: {value: 42}, body: [42]}",
         "success": false,
       }
+    `);
+  });
+  it('does not break when every value in the union is never', () => {
+    expect(Union(Never, Never).safeParse({ myValue: 42 })).toMatchInlineSnapshot(`
+      Object {
+        "fullError": Array [
+          "Unable to assign {myValue: 42} to never | never",
+          Array [
+            "Unable to assign {myValue: 42} to never",
+            Array [
+              "Expected nothing, but was {myValue: 42}",
+            ],
+          ],
+          Array [
+            "And unable to assign {myValue: 42} to never",
+            Array [
+              "Expected nothing, but was {myValue: 42}",
+            ],
+          ],
+        ],
+        "message": "Expected never | never, but was {myValue: 42}",
+        "success": false,
+      }
+    `);
+  });
+  it('can make use of imperfect discriminants', () => {
+    const Circle = Named(
+      'Circle',
+      Union(
+        Object({
+          type: Literal('CIRCLE'),
+          version: Literal(1),
+          radius: Number,
+        }),
+        Object({
+          type: Literal('CIRCLE'),
+          version: Literal(2),
+          radius: Number,
+          color: String,
+        }),
+      ),
+    );
+    expect(Circle.parse({ type: 'CIRCLE', version: 2, radius: 42, color: 'red' })).toEqual({
+      type: 'CIRCLE',
+      version: 2,
+      radius: 42,
+      color: 'red',
+    });
+    expect(() => Circle.parse({ type: 'CIRCLE', version: 2, radius: 42 }))
+      .toThrowErrorMatchingInlineSnapshot(`
+      "Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"CIRCLE\\"; version: 1; radius: number; } | { type: \\"CIRCLE\\"; version: 2; radius: number; color: string; }
+        Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"CIRCLE\\"; version: 2; radius: number; color: string; }
+          The types of \\"color\\" are not compatible
+            Expected string, but was undefined"
+    `);
+
+    const MyUnion = Union(
+      Object({
+        type: Literal('SQUARE'),
+        version: Literal(1),
+        size: Number,
+      }),
+      Object({
+        type: Literal('SQUARE'),
+        version: Literal(2),
+        size: Number,
+        color: String,
+      }),
+      Circle,
+      Object({
+        type: Literal('RECTANGLE'),
+        version: Literal(1),
+        width: Number,
+        height: Number,
+        color: String,
+      }),
+    );
+    expect(MyUnion.parse({ type: 'SQUARE', version: 2, size: 42, color: 'red' })).toEqual({
+      type: 'SQUARE',
+      version: 2,
+      size: 42,
+      color: 'red',
+    });
+    expect(MyUnion.parse({ type: 'CIRCLE', version: 2, radius: 42, color: 'red' })).toEqual({
+      type: 'CIRCLE',
+      version: 2,
+      radius: 42,
+      color: 'red',
+    });
+    expect(
+      MyUnion.parse({ type: 'RECTANGLE', version: 1, width: 42, height: 8, color: 'red' }),
+    ).toEqual({ type: 'RECTANGLE', version: 1, width: 42, height: 8, color: 'red' });
+    expect(() => MyUnion.assert({ type: 'RECTANGLE', version: 1, width: 10, height: 20 }))
+      .toThrowErrorMatchingInlineSnapshot(`
+      "Unable to assign {type: \\"RECTANGLE\\", version: 1 ... } to { type: \\"SQUARE\\"; version: 1; size: number; } | { type: \\"SQUARE\\"; version: 2; size: number; color: string; } | Circle | { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }
+        Unable to assign {type: \\"RECTANGLE\\", version: 1 ... } to { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }
+          The types of \\"color\\" are not compatible
+            Expected string, but was undefined"
+    `);
+    expect(() => MyUnion.parse({ type: 'CIRCLE', version: 2, radius: 42 }))
+      .toThrowErrorMatchingInlineSnapshot(`
+      "Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"SQUARE\\"; version: 1; size: number; } | { type: \\"SQUARE\\"; version: 2; size: number; color: string; } | Circle | { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }
+        Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"CIRCLE\\"; version: 1; radius: number; } | { type: \\"CIRCLE\\"; version: 2; radius: number; color: string; }
+          Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"CIRCLE\\"; version: 2; radius: number; color: string; }
+            The types of \\"color\\" are not compatible
+              Expected string, but was undefined"
+    `);
+    expect(() => MyUnion.assert({ type: 'CIRCLE', version: 2, radius: 42 }))
+      .toThrowErrorMatchingInlineSnapshot(`
+      "Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"SQUARE\\"; version: 1; size: number; } | { type: \\"SQUARE\\"; version: 2; size: number; color: string; } | Circle | { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }
+        Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"CIRCLE\\"; version: 1; radius: number; } | { type: \\"CIRCLE\\"; version: 2; radius: number; color: string; }
+          Unable to assign {type: \\"CIRCLE\\", version: 2, radius: 42} to { type: \\"CIRCLE\\"; version: 2; radius: number; color: string; }
+            The types of \\"color\\" are not compatible
+              Expected string, but was undefined"
+    `);
+    expect(() => MyUnion.parse({ type: 'SQUARE', version: 2, size: 42 }))
+      .toThrowErrorMatchingInlineSnapshot(`
+      "Unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 1; size: number; } | { type: \\"SQUARE\\"; version: 2; size: number; color: string; } | Circle | { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }
+        Unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 1; size: number; }
+          The types of \\"version\\" are not compatible
+            Expected literal 1, but was 2
+        And unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 2; size: number; color: string; }
+          The types of \\"color\\" are not compatible
+            Expected string, but was undefined"
+    `);
+    expect(() => MyUnion.assert({ type: 'SQUARE', version: 2, size: 42 }))
+      .toThrowErrorMatchingInlineSnapshot(`
+      "Unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 1; size: number; } | { type: \\"SQUARE\\"; version: 2; size: number; color: string; } | Circle | { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }
+        Unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 1; size: number; }
+          The types of \\"version\\" are not compatible
+            Expected literal 1, but was 2
+        And unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 2; size: number; color: string; }
+          The types of \\"color\\" are not compatible
+            Expected string, but was undefined"
+    `);
+    expect(() => MyUnion.serialize({ type: 'SQUARE', version: 2, size: 42 } as any))
+      .toThrowErrorMatchingInlineSnapshot(`
+      "Unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 1; size: number; } | { type: \\"SQUARE\\"; version: 2; size: number; color: string; } | Circle | { type: \\"RECTANGLE\\"; version: 1; width: number; height: number; color: string; }
+        Unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 1; size: number; }
+          The types of \\"version\\" are not compatible
+            Expected literal 1, but was 2
+        And unable to assign {type: \\"SQUARE\\", version: 2, size: 42} to { type: \\"SQUARE\\"; version: 2; size: number; color: string; }
+          The types of \\"color\\" are not compatible
+            Expected string, but was undefined"
     `);
   });
 });

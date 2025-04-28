@@ -163,12 +163,24 @@ test('Upgrade Example', () => {
         Array [
           "The types of \\"version\\" are not compatible",
           Array [
-            "Expected 2, but was 1",
+            "Expected literal 2, but was 1",
+          ],
+        ],
+        Array [
+          "The types of \\"width\\" are not compatible",
+          Array [
+            "Expected number, but was undefined",
+          ],
+        ],
+        Array [
+          "The types of \\"height\\" are not compatible",
+          Array [
+            "Expected number, but was undefined",
           ],
         ],
       ],
       "key": "version",
-      "message": "Expected 2, but was 1",
+      "message": "Expected literal 2, but was 1",
       "success": false,
     }
   `);
@@ -184,7 +196,11 @@ test('Upgrade Example', () => {
     .toThrowErrorMatchingInlineSnapshot(`
     "Unable to assign {version: 1, size: 20} to { version: 2; width: number; height: number; }
       The types of \\"version\\" are not compatible
-        Expected 2, but was 1"
+        Expected literal 2, but was 1
+      The types of \\"width\\" are not compatible
+        Expected number, but was undefined
+      The types of \\"height\\" are not compatible
+        Expected number, but was undefined"
   `);
 });
 
@@ -290,6 +306,25 @@ test('serialize can return an error', () => {
   expect(URLString.safeSerialize(new URL('http://example.com'))).toMatchInlineSnapshot(`
     Object {
       "message": "Refusing to serialize insecure URL: http://example.com/",
+      "success": false,
+    }
+  `);
+});
+
+test('serialize returns an error if not implemented', () => {
+  const URLString = ParsedValue(String, {
+    parse(value) {
+      try {
+        return { success: true, value: new URL(value) };
+      } catch (ex) {
+        return { success: false, message: `Expected a valid URL but got '${value}'` };
+      }
+    },
+  });
+
+  expect(URLString.safeSerialize(new URL('https://example.com'))).toMatchInlineSnapshot(`
+    Object {
+      "message": "ParsedValue<string> does not support Runtype.serialize",
       "success": false,
     }
   `);
@@ -530,26 +565,27 @@ test('Handles partial tests on parse', () => {
   // but this is only because it is not implemented
   expect(() => ResultType.assert(undefined)).toThrowErrorMatchingInlineSnapshot(`
     "Unable to assign undefined to { hello: \\"world\\"; } | ParsedValue<{}>
-      Unable to assign undefined to ParsedValue<{}>
-        ParsedValue<{}> does not support Runtype.test
-      And unable to assign undefined to Object"
+      Unable to assign undefined to { hello: \\"world\\"; }
+        Expected { hello: \\"world\\"; }, but was undefined
+      And unable to assign undefined to ParsedValue<{}>
+        ParsedValue<{}> does not support Runtype.test"
   `);
   expect(() => JsonType.assert(undefined)).toThrowErrorMatchingInlineSnapshot(`
     "Unable to assign undefined to { hello: \\"world\\"; } | ParsedValue<{}>
-      Unable to assign undefined to ParsedValue<{}>
-        ParsedValue<{}> does not support Runtype.test
-      And unable to assign undefined to Object"
+      Unable to assign undefined to { hello: \\"world\\"; }
+        Expected { hello: \\"world\\"; }, but was undefined
+      And unable to assign undefined to ParsedValue<{}>
+        ParsedValue<{}> does not support Runtype.test"
   `);
 
   // We used Sealed, so extra properties are not allowed
   expect(() => JsonType.assert({ hello: 'world', whatever: true }))
     .toThrowErrorMatchingInlineSnapshot(`
     "Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; } | ParsedValue<{}>
-      Unable to assign {hello: \\"world\\", whatever: true} to ParsedValue<{}>
-        ParsedValue<{}> does not support Runtype.test
-      And unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
-        Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
-          Unexpected property: whatever"
+      Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
+        Unexpected property: whatever
+      And unable to assign {hello: \\"world\\", whatever: true} to ParsedValue<{}>
+        ParsedValue<{}> does not support Runtype.test"
   `);
 
   // The basic parsing works
@@ -568,12 +604,11 @@ test('Handles partial tests on parse', () => {
   expect(showError(JsonType.safeParse(`{"hello": "world", "whatever": true}`) as any))
     .toMatchInlineSnapshot(`
     "Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; } | ParsedValue<{}>
-      Unable to assign {hello: \\"world\\", whatever: true} to {}
-        Unexpected property: hello
+      Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
         Unexpected property: whatever
-      And unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
-        Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
-          Unexpected property: whatever"
+      And unable to assign {hello: \\"world\\", whatever: true} to {}
+        Unexpected property: hello
+        Unexpected property: whatever"
   `);
 
   // We can serialize the normal object
@@ -590,8 +625,7 @@ test('Handles partial tests on parse', () => {
   expect(showError(JsonType.safeSerialize({ hello: 'world', whatever: true } as any) as any))
     .toMatchInlineSnapshot(`
     "Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
-      Unable to assign {hello: \\"world\\", whatever: true} to { hello: \\"world\\"; }
-        Unexpected property: whatever"
+      Unexpected property: whatever"
   `);
 
   // We still apply normal tests post-parse, so you can still use the `test` to add

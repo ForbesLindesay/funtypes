@@ -76,15 +76,23 @@ function findFields<TResult>(
     for (const fieldName of Object.keys(underlying.fields)) {
       pushField(fieldName, underlying.fields[fieldName]);
     }
-  }
-  if (isTupleRuntype(underlying)) {
+  } else if (isTupleRuntype(underlying)) {
     underlying.components.forEach((type, i) => {
       pushField(`${i}`, type);
     });
-  }
-  if (isIntersectRuntype(underlying)) {
+  } else if (isIntersectRuntype(underlying)) {
     for (const type of underlying.intersectees) {
       fields.push(...findFields(type, mode));
+    }
+  } else if (isUnionType(underlying)) {
+    const alternatives = underlying.alternatives.map(type => findFields(type, mode));
+    const fieldNames = intersect(alternatives.map(v => new Set(v.map(([fieldName]) => fieldName))));
+    for (const v of alternatives) {
+      for (const [fieldName, type] of v) {
+        if (fieldNames.has(fieldName)) {
+          pushField(fieldName, type);
+        }
+      }
     }
   }
   return fields;
@@ -101,34 +109,64 @@ function intersect<T>(sets: Set<T>[]) {
   }
   return result;
 }
+interface Discriminant<TResult> {
+  largestDiscriminant: number;
+  fieldTypes: Map<LiteralValue, Set<RuntypeBase<TResult>>>;
+}
+function createDiscriminant<TResult>(): Discriminant<TResult> {
+  return { largestDiscriminant: 0, fieldTypes: new Map() };
+}
 function findDiscriminator<TResult>(
   recordAlternatives: readonly (readonly [RuntypeBase<TResult>, [string, RuntypeBase][]])[],
 ) {
   const commonFieldNames = intersect(
     recordAlternatives.map(([, fields]) => new Set(fields.map(([fieldName]) => fieldName))),
   );
-  const commonLiteralFields = new Map<string, Map<LiteralValue, RuntypeBase<TResult>>>(
+
+  const commonLiteralFields = new Map<string, Discriminant<TResult>>(
     // we want to always check these props first, in case there are multiple possible keys
     // that can be used to discriminate
-    ['type', 'kind', 'tag', 'version'].map(fieldName => [fieldName, new Map()]),
+    ['type', 'kind', 'tag', 'version'].map(fieldName => [fieldName, createDiscriminant()]),
   );
   for (const [type, fields] of recordAlternatives) {
     for (const [fieldName, field] of fields) {
-      if (isLiteralRuntype(field)) {
-        const fieldTypes = mapGet(commonLiteralFields)(fieldName, () => new Map());
-        if (fieldTypes.has(field.value)) {
-          commonFieldNames.delete(fieldName);
+      if (commonFieldNames.has(fieldName)) {
+        if (isLiteralRuntype(field)) {
+          const discriminant = mapGet(commonLiteralFields)(fieldName, createDiscriminant);
+          const typesForThisDiscriminant = discriminant.fieldTypes.get(field.value);
+          if (typesForThisDiscriminant) {
+            typesForThisDiscriminant.add(type);
+            discriminant.largestDiscriminant = Math.max(
+              discriminant.largestDiscriminant,
+              typesForThisDiscriminant.size,
+            );
+          } else {
+            discriminant.largestDiscriminant = Math.max(discriminant.largestDiscriminant, 1);
+            discriminant.fieldTypes.set(field.value, new Set([type]));
+          }
         } else {
-          fieldTypes.set(field.value, type);
+          commonFieldNames.delete(fieldName);
         }
-      } else {
-        commonFieldNames.delete(fieldName);
       }
     }
   }
-  for (const [fieldName, fieldTypes] of commonLiteralFields) {
+  let bestDiscriminatorSize = Infinity;
+  for (const [fieldName, { largestDiscriminant }] of commonLiteralFields) {
     if (commonFieldNames.has(fieldName)) {
-      return [fieldName, fieldTypes] as const;
+      bestDiscriminatorSize = Math.min(bestDiscriminatorSize, largestDiscriminant);
+    }
+  }
+  if (bestDiscriminatorSize >= recordAlternatives.length) {
+    return undefined;
+  }
+  for (const [fieldName, { fieldTypes, largestDiscriminant }] of commonLiteralFields) {
+    if (largestDiscriminant === bestDiscriminatorSize && commonFieldNames.has(fieldName)) {
+      return [
+        fieldName,
+        new Map(
+          Array.from(fieldTypes).map(([fieldValue, types]) => [fieldValue, Array.from(types)]),
+        ),
+      ] as const;
     }
   }
 }
@@ -152,27 +190,35 @@ export function Union<
   }
   function validateWithKey(
     tag: string,
-    types: Map<LiteralValue, RuntypeBase<TResult>>,
+    types: Map<LiteralValue, RuntypeBase<TResult>[]>,
   ): InnerValidate {
-    const typesString = `${Array.from(types.values())
-      .map(v => show(v, true))
-      .join(' | ')}`;
+    const typeStrings = new Set<string>();
+    for (const t of types.values()) {
+      for (const v of t) {
+        typeStrings.add(show(v, true));
+      }
+    }
+    const typesString = Array.from(typeStrings).join(' | ');
     return (value, innerValidate) => {
       if (!value || typeof value !== 'object') {
         return expected(typesString, value);
       }
       const validator = types.get(value[tag]);
       if (validator) {
-        const result = innerValidate(validator, value);
-        if (!result.success) {
-          return failure(result.message, {
-            key: `<${/^\d+$/.test(tag) ? `[${tag}]` : tag}: ${showValue(value[tag])}>${
-              result.key ? `.${result.key}` : ``
-            }`,
-            fullError: unableToAssign(value, typesString, result),
-          });
+        if (validator.length === 1) {
+          const result = innerValidate(validator[0], value);
+          if (!result.success) {
+            return failure(result.message, {
+              key: `<${/^\d+$/.test(tag) ? `[${tag}]` : tag}: ${showValue(value[tag])}>${
+                result.key ? `.${result.key}` : ``
+              }`,
+              fullError: unableToAssign(value, typesString, result),
+            });
+          }
+          return result;
         }
-        return result;
+
+        return validateWithoutKeyInner(validator, value, innerValidate);
       } else {
         const err = expected(
           Array.from(types.keys())
@@ -193,36 +239,48 @@ export function Union<
     };
   }
 
-  function validateWithoutKey(alternatives: readonly RuntypeBase<TResult>[]): InnerValidate {
-    return (value, innerValidate) => {
-      let fullError: FullError | undefined;
-      for (const targetType of alternatives) {
-        const result = innerValidate(targetType, value);
-        if (result.success) {
-          return result as Result<TResult>;
-        }
-        if (!fullError) {
-          fullError = unableToAssign(
-            value,
-            runtype,
-            result.fullError || unableToAssign(value, targetType, result),
-          );
-        } else {
-          fullError.push(andError(result.fullError || unableToAssign(value, targetType, result)));
-        }
+  function validateWithoutKeyInner(
+    alternatives: readonly RuntypeBase<TResult>[],
+    value: any,
+    innerValidate: InnerValidateHelper,
+  ): Result<TResult> {
+    let fullError: FullError | undefined;
+    for (const targetType of alternatives) {
+      const result = innerValidate(targetType, value);
+      if (result.success) {
+        return result as Result<TResult>;
       }
+      if (!fullError) {
+        fullError = unableToAssign(
+          value,
+          runtype,
+          result.fullError || unableToAssign(value, targetType, result),
+        );
+      } else {
+        fullError.push(andError(result.fullError || unableToAssign(value, targetType, result)));
+      }
+    }
 
-      return expected(runtype, value, {
-        fullError,
-      });
-    };
+    return expected(runtype, value, {
+      fullError,
+    });
+  }
+  function validateWithoutKey(alternatives: readonly RuntypeBase<TResult>[]): InnerValidate {
+    return (value, innerValidate) => validateWithoutKeyInner(alternatives, value, innerValidate);
+  }
+  function validateOnlyOption(innerType: RuntypeBase<TResult>): InnerValidate {
+    return (value, innerValidate) => innerValidate(innerType, value);
   }
 
   // This must be lazy to avoid eagerly evaluating any circular references
   const validatorOf = (mode: 'p' | 's' | 't'): InnerValidate => {
-    const withFields = flatAlternatives
-      .filter(a => unwrapRuntype(a, mode).tag !== 'never')
-      .map(a => [a, findFields(a, mode)] as const);
+    const nonNeverAlternatives = flatAlternatives.filter(
+      a => unwrapRuntype(a, mode).tag !== 'never',
+    );
+    if (nonNeverAlternatives.length === 1) {
+      return validateOnlyOption(nonNeverAlternatives[0]);
+    }
+    const withFields = nonNeverAlternatives.map(a => [a, findFields(a, mode)] as const);
     const withAtLeastOneField = withFields.filter(a => a[1].length !== 0);
     const withNoFields = withFields.filter(a => a[1].length === 0);
     const discriminant = findDiscriminator(withAtLeastOneField);
