@@ -1,96 +1,37 @@
 import {
   Static,
   create,
-  RuntypeBase,
+  Runtype,
   Codec,
   createValidationPlaceholder,
   assertRuntype,
+  showType,
+  isRuntype,
 } from '../runtype';
 import { hasKey } from '../util';
-import show from '../show';
 import { Failure } from '..';
 import { expected, failure, FullError, typesAreNotCompatible, unableToAssign } from '../result';
 
-export type RecordFields = { readonly [_: string]: RuntypeBase<unknown> };
-type MutableRecordStaticType<O extends RecordFields> = {
-  -readonly [K in keyof O]: Static<O[K]>;
-};
-type ReadonlyRecordStaticType<O extends RecordFields> = {
-  readonly [K in keyof O]: Static<O[K]>;
-};
-type PartialMutableRecordStaticType<O extends RecordFields> = {
-  -readonly [K in keyof O]?: Static<O[K]>;
-};
-type PartialReadonlyRecordStaticType<O extends RecordFields> = {
-  readonly [K in keyof O]?: Static<O[K]>;
-};
-type RecordStaticType<
-  O extends RecordFields,
-  IsPartial extends boolean,
-  IsReadonly extends boolean,
-> = IsPartial extends false
-  ? IsReadonly extends false
-    ? MutableRecordStaticType<O>
-    : ReadonlyRecordStaticType<O>
-  : IsReadonly extends false
-  ? PartialMutableRecordStaticType<O>
-  : PartialReadonlyRecordStaticType<O>;
-
-export interface InternalRecord<
-  O extends RecordFields,
-  IsPartial extends boolean,
-  IsReadonly extends boolean,
-> extends Codec<RecordStaticType<O, IsPartial, IsReadonly>> {
-  readonly tag: 'object';
-  readonly fields: O;
-  readonly isPartial: IsPartial;
-  readonly isReadonly: IsReadonly;
-  asPartial(): Partial<O, IsReadonly>;
-  asReadonly(): IsPartial extends false ? Obj<O, true> : Partial<O, true>;
-  pick<TKeys extends [keyof O, ...(keyof O)[]]>(
-    ...keys: TKeys
-  ): InternalRecord<Pick<O, TKeys[number]>, IsPartial, IsReadonly>;
-  omit<TKeys extends [keyof O, ...(keyof O)[]]>(
-    ...keys: TKeys
-  ): InternalRecord<Omit<O, TKeys[number]>, IsPartial, IsReadonly>;
-}
-
-export { Obj as Object };
-type Obj<O extends RecordFields, IsReadonly extends boolean> = InternalRecord<O, false, IsReadonly>;
-
-export type Partial<O extends RecordFields, IsReadonly extends boolean> = InternalRecord<
-  O,
-  true,
-  IsReadonly
->;
-
-export function isObjectRuntype(
-  runtype: RuntypeBase,
-): runtype is InternalRecord<RecordFields, boolean, boolean> {
-  return (
-    'tag' in runtype && (runtype as InternalRecord<RecordFields, boolean, boolean>).tag === 'object'
-  );
-}
+export type RecordFields = { readonly [_: string]: Runtype };
 
 /**
  * Construct an object runtype from runtypes for its values.
  */
-export function InternalObject<O extends RecordFields, Part extends boolean, RO extends boolean>(
+function InternalObject<O extends RecordFields, Part extends boolean, RO extends boolean>(
   fields: O,
   isPartial: Part,
   isReadonly: RO,
-): InternalRecord<O, Part, RO> {
+): Codec<any> {
   assertRuntype(...Object.values(fields));
   const fieldNames: ReadonlySet<string> = new Set(Object.keys(fields));
-  const runtype: InternalRecord<O, Part, RO> = create<InternalRecord<O, Part, RO>>(
-    'object',
+  const runtype: Codec<any> = create<any>(
     {
-      p: (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
+      _parse: (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
         if (x === null || x === undefined || typeof x !== 'object') {
           return expected(runtype, x);
         }
         if (Array.isArray(x)) {
-          return failure(`Expected ${show(runtype)}, but was an Array`);
+          return failure(`Expected ${showType(runtype)}, but was an Array`);
         }
 
         return createValidationPlaceholder(Object.create(null), (placeholder: any) => {
@@ -140,75 +81,90 @@ export function InternalObject<O extends RecordFields, Part extends boolean, RO 
           return firstError;
         });
       },
-      f: () => fieldNames,
-    },
-    {
-      isPartial,
-      isReadonly,
-      fields,
-      asPartial,
-      asReadonly,
-      pick,
-      omit,
-      show() {
+      _fields: () => fieldNames,
+      _showType() {
         const keys = Object.keys(fields);
         return keys.length
           ? `{ ${keys
               .map(
                 k =>
-                  `${isReadonly ? 'readonly ' : ''}${k}${isPartial ? '?' : ''}: ${show(
+                  `${isReadonly ? 'readonly ' : ''}${k}${isPartial ? '?' : ''}: ${showType(
                     fields[k],
                     false,
-                  )};`,
+                  )}`,
               )
-              .join(' ')} }`
+              .join('; ')} }`
           : '{}';
       },
+      _asMutable: () => InternalObject(fields, isPartial, false),
+      _asReadonly: () => InternalObject(fields, isPartial, true),
+      _pick: keys => {
+        return InternalObject(
+          Object.fromEntries(Object.entries(fields).filter(([k]) => keys.includes(k))),
+          isPartial,
+          isReadonly,
+        );
+      },
+      _omit: keys => {
+        return InternalObject(
+          Object.fromEntries(Object.entries(fields).filter(([k]) => !keys.includes(k))),
+          isPartial,
+          isReadonly,
+        );
+      },
+    },
+    {
+      tag: 'object',
+      isPartial,
+      isReadonly,
+      fields,
     },
   );
-
   return runtype;
-
-  function asPartial() {
-    return InternalObject(runtype.fields, true, runtype.isReadonly);
-  }
-
-  function asReadonly(): any {
-    return InternalObject(runtype.fields, runtype.isPartial, true);
-  }
-
-  function pick<TKeys extends [keyof O, ...(keyof O)[]]>(
-    ...keys: TKeys
-  ): InternalRecord<Pick<O, TKeys[number]>, Part, RO> {
-    const newFields: Pick<O, TKeys[number]> = {} as any;
-    for (const key of keys) {
-      newFields[key] = fields[key];
-    }
-    return InternalObject(newFields, isPartial, isReadonly);
-  }
-
-  function omit<TKeys extends [keyof O, ...(keyof O)[]]>(
-    ...keys: TKeys
-  ): InternalRecord<Omit<O, TKeys[number]>, Part, RO> {
-    const newFields: Omit<O, TKeys[number]> = { ...fields } as any;
-    for (const key of keys) {
-      if (key in newFields) delete (newFields as any)[key];
-    }
-    return InternalObject(newFields, isPartial, isReadonly);
-  }
 }
 
-function Obj<O extends RecordFields>(fields: O): Obj<O, false> {
+function Obj<O extends RecordFields>(
+  fields: O,
+): Codec<{
+  -readonly [K in keyof O]: Static<O[K]>;
+}> {
   return InternalObject(fields, false, false);
 }
-export function ReadonlyObject<O extends RecordFields>(fields: O): Obj<O, true> {
+export { Obj as Object };
+export function ReadonlyObject<O extends RecordFields>(
+  fields: O,
+): Codec<{
+  readonly [K in keyof O]: Static<O[K]>;
+}> {
   return InternalObject(fields, false, true);
 }
 
-export function Partial<O extends RecordFields>(fields: O): Partial<O, false> {
-  return InternalObject(fields, true, false);
+export function Partial<O extends { [_: string]: unknown }>(
+  fields: Codec<O>,
+): Codec<{
+  [K in keyof O]?: O[K];
+}>;
+export function Partial<O extends RecordFields>(
+  fields: O,
+): Codec<{
+  -readonly [K in keyof O]?: Static<O[K]>;
+}>;
+export function Partial(fields: any): Codec<any> {
+  if (isRuntype(fields)) {
+    if (fields.introspection.tag !== 'object') {
+      // TODO
+      throw new Error(`Partial can only be applied to Object runtype at the moment`);
+    }
+    return InternalObject(fields.introspection.fields, true, fields.introspection.isReadonly);
+  } else {
+    return InternalObject(fields, true, false);
+  }
 }
 
-export function ReadonlyPartial<O extends RecordFields>(fields: O): Partial<O, true> {
+export function ReadonlyPartial<O extends RecordFields>(
+  fields: O,
+): Codec<{
+  readonly [K in keyof O]?: Static<O[K]>;
+}> {
   return InternalObject(fields, true, true);
 }

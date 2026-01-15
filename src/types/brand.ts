@@ -1,34 +1,22 @@
-import { RuntypeBase, Static, create, Codec, assertRuntype } from '../runtype';
-import show from '../show';
+import { create, Codec, assertRuntype, showType } from '../runtype';
 
-export const RuntypeName = Symbol('RuntypeName');
-
-export interface Brand<B extends string, A extends RuntypeBase<unknown>>
-  extends Codec<
-    Static<A> & {
-      [RuntypeName]: B;
-    }
-  > {
-  readonly tag: 'brand';
-  readonly brand: B;
-  readonly entity: A;
-}
-
-export function Brand<B extends string, A extends RuntypeBase<unknown>>(brand: B, entity: A) {
+const RuntypeName = Symbol('RuntypeName');
+export type BrandedType<B extends string, T> = T & { [RuntypeName]: B };
+export function Brand<B extends string, T>(brand: B, entity: Codec<T>): Codec<BrandedType<B, T>> {
   assertRuntype(entity);
-  return create<Brand<B, A>>(
-    'brand',
+  return create<BrandedType<B, T>>(
     {
-      p: (value, _innerValidate, innerValidateToPlaceholder) =>
+      _parse: (value, _innerValidate, innerValidateToPlaceholder) =>
         innerValidateToPlaceholder(entity, value) as any,
-      u: () => entity,
+      _underlyingType: () => entity,
+      _showType(needsParens) {
+        return showType(entity, needsParens);
+      },
     },
     {
+      tag: 'brand',
       brand,
       entity,
-      show(needsParens) {
-        return show(entity, needsParens);
-      },
     },
   );
 }

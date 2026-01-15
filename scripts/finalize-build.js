@@ -1,5 +1,7 @@
-const { writeFileSync, readFileSync, rmSync, readdirSync } = require('fs');
-const { parse } = require('@babel/parser');
+import { writeFileSync, readFileSync, rmSync, readdirSync } from 'fs';
+import { parse } from '@babel/parser';
+
+const __dirname = import.meta.dirname;
 
 function getExports(filename) {
   const ast = parse(readFileSync(`${__dirname}/../${filename}`, `utf8`), {
@@ -16,7 +18,7 @@ function getExports(filename) {
       case 'ExportNamedDeclaration':
         for (const specifier of statement.specifiers) {
           const exportKind =
-            specifier.exportKind === 'type' ? 'type' : statement.exportKind ?? 'value';
+            specifier.exportKind === 'type' ? 'type' : (statement.exportKind ?? 'value');
           exports[exportKind].push(specifier.exported.name);
         }
         break;
@@ -35,23 +37,19 @@ const EXPORTS_TO_RENAME = new Set([`Array`, `Object`, `Partial`, `Record`, `Tupl
 
 const baseModule = getExports(`src/index.ts`);
 
-const commonJs = [`"use strict";`, `const m = require("./index.js")`, ``];
 const esModule = [
   `import {`,
   ...baseModule.value.filter(v => !EXPORTS_TO_RENAME.has(v)).map(v => `  ${v},`),
-  `} from "./index.mjs";`,
+  `} from "./index.js";`,
   `export {`,
 ];
 for (const exportName of baseModule.value) {
   if (EXPORTS_TO_RENAME.has(exportName)) {
-    commonJs.push(`exports.${exportName} = m.Readonly${exportName};`);
     esModule.push(`  Readonly${exportName} as ${exportName},`);
   } else {
-    commonJs.push(`exports.${exportName} = m.${exportName};`);
     esModule.push(`  ${exportName},`);
   }
 }
-commonJs.push(``);
 esModule.push(`};`, ``);
 
 const types = [`export {`];
@@ -62,10 +60,9 @@ for (const exportName of baseModule.all) {
     types.push(`  ${exportName},`);
   }
 }
-types.push(`} from "./index";`, ``);
+types.push(`} from "./index.js";`, ``);
 
-writeFileSync(`lib/readonly.js`, commonJs.join(`\n`));
-writeFileSync(`lib/readonly.mjs`, esModule.join(`\n`));
+writeFileSync(`lib/readonly.js`, esModule.join(`\n`));
 writeFileSync(`lib/readonly.d.ts`, types.join(`\n`));
 
 const typesSrc = readFileSync(`dist/index.d.ts`, `utf8`).replace(/\r\n/g, '\n').split('\n');
@@ -88,6 +85,7 @@ writeFileSync(
     .map(line => {
       const match = /^declare (?:(?:type)|(?:interface)) ([A-Za-z0-9_]+)[ <]/.exec(line);
       if (match && !aliasedTypes.has(match[1])) {
+        console.warn(`🚨 Internal type exposed: ${match[1]}`);
         return `${internalTypePrefix.join(`\n`)}\nexport ${line}`;
       }
       return line;
@@ -103,8 +101,33 @@ const ALLOWED_FILES = new Set(
     .map(f => f.substring('lib/'.length)),
 );
 
+const replacements = {
+  _parse: 'p',
+  _test: 't',
+  _serialize: 's',
+  _underlyingType: 'u',
+  _fields: 'f',
+  _showType: 'v',
+  _asMutable: 'm',
+  _asReadonly: 'r',
+  _pick: 'y',
+  _omit: 'x',
+};
 readdirSync(`lib`).forEach(f => {
   if (!ALLOWED_FILES.has(f)) {
     rmSync(`lib/${f}`, { recursive: true, force: true });
+  } else {
+    writeFileSync(
+      `lib/${f}`,
+      readFileSync(`lib/${f}`, `utf8`).replace(
+        new RegExp(
+          Object.keys(replacements)
+            .map(r => `\\b${r}\\b`)
+            .join(`|`),
+          `g`,
+        ),
+        matched => replacements[matched],
+      ),
+    );
   }
 });

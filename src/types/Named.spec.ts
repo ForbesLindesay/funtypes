@@ -11,35 +11,35 @@ it('should make unions easier to understand', () => {
   const Shape = Union(Square, Rectangle, Circle, Null);
 
   expect(Shape.safeParse({ shape: `Rectangle`, size: new Date() })).toMatchInlineSnapshot(`
-    Object {
-      "fullError": Array [
-        "Unable to assign {shape: \\"Rectangle\\", size: {}} to Square | Rectangle | Circle | null",
-        Array [
-          "Unable to assign {shape: \\"Rectangle\\", size: {}} to null",
-          Array [
-            "Expected literal null, but was {shape: \\"Rectangle\\", size: {}}",
+    {
+      "fullError": [
+        "Unable to assign {shape: "Rectangle", size: {}} to Square | Rectangle | Circle | null",
+        [
+          "Unable to assign {shape: "Rectangle", size: {}} to null",
+          [
+            "Expected literal null, but was {shape: "Rectangle", size: {}}",
           ],
         ],
-        Array [
-          "And unable to assign {shape: \\"Rectangle\\", size: {}} to Square | Rectangle | Circle",
-          Array [
-            "Unable to assign {shape: \\"Rectangle\\", size: {}} to { shape: \\"Rectangle\\"; width: number; height: number; }",
-            Array [
-              "The types of \\"width\\" are not compatible",
-              Array [
+        [
+          "And unable to assign {shape: "Rectangle", size: {}} to Square | Rectangle | Circle",
+          [
+            "Unable to assign {shape: "Rectangle", size: {}} to { shape: "Rectangle"; width: number; height: number }",
+            [
+              "The types of "width" are not compatible",
+              [
                 "Expected number, but was undefined",
               ],
             ],
-            Array [
-              "The types of \\"height\\" are not compatible",
-              Array [
+            [
+              "The types of "height" are not compatible",
+              [
                 "Expected number, but was undefined",
               ],
             ],
           ],
         ],
       ],
-      "message": "Expected Square | Rectangle | Circle | null, but was {shape: \\"Rectangle\\", size: {}}",
+      "message": "Expected Square | Rectangle | Circle | null, but was {shape: "Rectangle", size: {}}",
       "success": false,
     }
   `);
@@ -48,35 +48,35 @@ it('should make unions easier to understand', () => {
 
   const Shape2 = Union(Union(Square, Rectangle, Circle), Null);
   expect(Shape2.safeParse({ shape: `Rectangle`, size: new Date() })).toMatchInlineSnapshot(`
-    Object {
-      "fullError": Array [
-        "Unable to assign {shape: \\"Rectangle\\", size: {}} to Square | Rectangle | Circle | null",
-        Array [
-          "Unable to assign {shape: \\"Rectangle\\", size: {}} to null",
-          Array [
-            "Expected literal null, but was {shape: \\"Rectangle\\", size: {}}",
+    {
+      "fullError": [
+        "Unable to assign {shape: "Rectangle", size: {}} to Square | Rectangle | Circle | null",
+        [
+          "Unable to assign {shape: "Rectangle", size: {}} to null",
+          [
+            "Expected literal null, but was {shape: "Rectangle", size: {}}",
           ],
         ],
-        Array [
-          "And unable to assign {shape: \\"Rectangle\\", size: {}} to Square | Rectangle | Circle",
-          Array [
-            "Unable to assign {shape: \\"Rectangle\\", size: {}} to { shape: \\"Rectangle\\"; width: number; height: number; }",
-            Array [
-              "The types of \\"width\\" are not compatible",
-              Array [
+        [
+          "And unable to assign {shape: "Rectangle", size: {}} to Square | Rectangle | Circle",
+          [
+            "Unable to assign {shape: "Rectangle", size: {}} to { shape: "Rectangle"; width: number; height: number }",
+            [
+              "The types of "width" are not compatible",
+              [
                 "Expected number, but was undefined",
               ],
             ],
-            Array [
-              "The types of \\"height\\" are not compatible",
-              Array [
+            [
+              "The types of "height" are not compatible",
+              [
                 "Expected number, but was undefined",
               ],
             ],
           ],
         ],
       ],
-      "message": "Expected Square | Rectangle | Circle | null, but was {shape: \\"Rectangle\\", size: {}}",
+      "message": "Expected Square | Rectangle | Circle | null, but was {shape: "Rectangle", size: {}}",
       "success": false,
     }
   `);

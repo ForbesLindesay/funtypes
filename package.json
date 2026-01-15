@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "description": "Runtime validation for static types",
   "main": "./lib/index.js",
-  "module": "./lib/index.mjs",
+  "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
+  "type": "module",
   "files": [
     "lib/index.js",
     "lib/index.d.ts",
@@ -18,12 +19,10 @@
   "exports": {
     "./readonly": {
       "types": "./lib/readonly.d.ts",
-      "import": "./lib/readonly.mjs",
       "default": "./lib/readonly.js"
     },
     ".": {
       "types": "./lib/index.d.ts",
-      "import": "./lib/index.mjs",
       "default": "./lib/index.js"
     }
   },
@@ -37,7 +36,7 @@
   "scripts": {
     "build": "tsc --noEmit && rollup -c && yarn api-extractor run --local && node scripts/finalize-build.js",
     "format": "node scripts/format.js",
-    "test": "jest $([ \"$CI\" = true ] && echo --coverage || echo --watch)",
+    "test": "rollup -c && jest $([ \"$CI\" = true ] && echo --coverage || echo --watch)",
     "typecheck": "tsc --noEmit --watch"
   },
   "author": "Thomas Crockett",
@@ -46,15 +45,15 @@
     "@babel/parser": "^7.17.8",
     "@microsoft/api-extractor": "^7.47.9",
     "@types/jest": "^27.4.1",
-    "jest": "^27.5.1",
-    "prettier": "^2.6.0",
+    "jest": "^30.2.0",
+    "prettier": "^3.8.0",
     "rollup": "^2.26.11",
-    "rollup-plugin-prettier": "^2.1.0",
+    "rollup-plugin-prettier": "^4.1.2",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.27.2",
-    "ts-jest": "^27.1.3",
+    "ts-jest": "^29.4.6",
     "type-assertions": "^1.1.0",
-    "typescript": "^4.6.2"
+    "typescript": "^5.9.3"
   },
   "keywords:": [
     "runtime",

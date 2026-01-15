@@ -1,6 +1,4 @@
-import type { RuntypeBase } from './runtype';
-import show from './show';
-import showValue from './showValue';
+import { Runtype, showType, showValue } from './runtype';
 
 export function success<T>(value: T): Success<T> {
   return { success: true, value };
@@ -14,12 +12,12 @@ export function failure(
 }
 
 export function expected(
-  expected: RuntypeBase | string,
+  expected: Runtype | string,
   value: unknown,
   options: Omit<Failure, 'success' | 'message'> = {},
 ): Failure {
   return failure(
-    `Expected ${typeof expected === 'string' ? expected : show(expected)}, but was ${showValue(
+    `Expected ${typeof expected === 'string' ? expected : showType(expected)}, but was ${showValue(
       value,
     )}`,
     options,
@@ -30,12 +28,12 @@ type FullErrorInput = FullError | Failure | string;
 
 export function unableToAssign(
   value: unknown,
-  expected: RuntypeBase | string,
+  expected: Runtype | string,
   ...children: FullErrorInput[]
 ): FullError {
   return [
     `Unable to assign ${showValue(value)} to ${
-      typeof expected === 'string' ? expected : show(expected)
+      typeof expected === 'string' ? expected : showType(expected)
     }`,
     ...children.map(toFullError),
   ];
@@ -99,8 +97,8 @@ export function showError(failure: Omit<Failure, 'success'>): string {
   return failure.fullError
     ? showFullError(failure.fullError)
     : failure.key
-    ? `${failure.message} in ${failure.key}`
-    : failure.message;
+      ? `${failure.message} in ${failure.key}`
+      : failure.message;
 }
 export function showFullError([title, ...children]: FullError, indent: string = ''): string {
   return [`${indent}${title}`, ...children.map(e => showFullError(e, `${indent}  `))].join('\n');

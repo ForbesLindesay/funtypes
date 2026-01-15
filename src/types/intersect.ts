@@ -1,48 +1,33 @@
 import { failure, success } from '../result';
 import {
-  Static,
   create,
-  RuntypeBase,
-  Codec,
+  Runtype,
   createValidationPlaceholder,
   assertRuntype,
   SealedState,
   getFields,
+  parenthesize,
+  showType,
+  Codec,
 } from '../runtype';
-import show, { parenthesize } from '../show';
 import { lazyValue } from './lazy';
-
-// We use the fact that a union of functions is effectively an intersection of parameters
-// e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
-export type StaticIntersect<TIntersectees extends readonly RuntypeBase<unknown>[]> = {
-  [key in keyof TIntersectees]: TIntersectees[key] extends RuntypeBase
-    ? (parameter: Static<TIntersectees[key]>) => any
-    : unknown;
-}[number] extends (k: infer I) => void
-  ? I
-  : never;
-
-export interface Intersect<
-  TIntersectees extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]],
-> extends Codec<StaticIntersect<TIntersectees>> {
-  readonly tag: 'intersect';
-  readonly intersectees: TIntersectees;
-}
-
-export function isIntersectRuntype(
-  runtype: RuntypeBase,
-): runtype is Intersect<[RuntypeBase, ...RuntypeBase[]]> {
-  return (
-    'tag' in runtype && (runtype as Intersect<[RuntypeBase, ...RuntypeBase[]]>).tag === 'intersect'
-  );
-}
 
 /**
  * Construct an intersection runtype from runtypes for its alternatives.
  */
-export function Intersect<
-  TIntersectees extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]],
->(...intersectees: TIntersectees): Intersect<TIntersectees> {
+export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
+  ...intersectees: TIntersectees
+): Codec<
+  // We use the fact that a union of functions is effectively an intersection of parameters
+  // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
+  {
+    [key in keyof TIntersectees]: TIntersectees[key] extends Runtype<infer T>
+      ? (parameter: T) => any
+      : unknown;
+  }[number] extends (k: infer I) => void
+    ? I
+    : never
+> {
   assertRuntype(...intersectees);
   const allFieldInfoForMode = (mode: 'p' | 't' | 's') => {
     const intresecteesWithOwnFields = intersectees.map(intersectee => ({
@@ -81,17 +66,26 @@ export function Intersect<
     t: lazyValue(() => allFieldInfoForMode(`t`)),
     s: lazyValue(() => allFieldInfoForMode(`s`)),
   };
-  return create<Intersect<TIntersectees>>(
-    'intersect',
+  return create<
+    // We use the fact that a union of functions is effectively an intersection of parameters
+    // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
     {
-      p: (value, innerValidate, _innerValidateToPlaceholder, mode, sealed) => {
+      [key in keyof TIntersectees]: TIntersectees[key] extends Runtype<infer T>
+        ? (parameter: T) => any
+        : unknown;
+    }[number] extends (k: infer I) => void
+      ? I
+      : never
+  >(
+    {
+      _parse: (value, innerValidate, _innerValidateToPlaceholder, mode, sealed) => {
         const getSealed = sealed
-          ? (targetType: RuntypeBase): SealedState => {
+          ? (targetType: Codec<any>): SealedState => {
               const i = allFieldInfo[mode]().intersecteesWithOtherFields.get(targetType);
               if (i === undefined) return false;
               else return { keysFromIntersect: i, deep: sealed.deep };
             }
-          : (_i: RuntypeBase): SealedState => false;
+          : (_i: Codec<any>): SealedState => false;
         if (Array.isArray(value)) {
           return createValidationPlaceholder<any>([...value], placeholder => {
             for (const targetType of intersectees) {
@@ -101,7 +95,7 @@ export function Intersect<
               }
               if (!Array.isArray(validated.value)) {
                 return failure(
-                  `The validator ${show(
+                  `The validator ${showType(
                     targetType,
                   )} attempted to convert the type of this value from an array to something else. That conversion is not valid as the child of an intersect`,
                 );
@@ -118,7 +112,7 @@ export function Intersect<
               }
               if (!(validated.value && typeof validated.value === 'object')) {
                 return failure(
-                  `The validator ${show(
+                  `The validator ${showType(
                     targetType,
                   )} attempted to convert the type of this value from an object to something else. That conversion is not valid as the child of an intersect`,
                 );
@@ -137,13 +131,34 @@ export function Intersect<
         }
         return success(result);
       },
-      f: mode => allFieldInfo[mode]().allFields,
+      _fields: mode => allFieldInfo[mode]().allFields,
+      _showType: needsParens => {
+        if (intersectees.length && intersectees.every(v => v.introspection.tag === 'object')) {
+          let result = '';
+          for (const intersectee of intersectees) {
+            const asString = showType(intersectee, needsParens);
+            if (!asString.endsWith(' }')) {
+              result = '';
+              break;
+            }
+            if (!result) {
+              result = asString;
+            } else {
+              result = result.slice(0, -2) + '; ' + asString.slice(2);
+            }
+          }
+          if (result) return result;
+        }
+        return parenthesize(`${intersectees.map(v => showType(v, true)).join(' & ')}`, needsParens);
+      },
+      _asMutable: asMutable => Intersect(...intersectees.map(asMutable)),
+      _asReadonly: asReadonly => Intersect(...intersectees.map(asReadonly)),
+      _pick: (keys, pick) => Intersect(...intersectees.map(t => pick(t, keys))),
+      _omit: (keys, omit) => Intersect(...intersectees.map(t => omit(t, keys))),
     },
     {
+      tag: 'intersect',
       intersectees,
-      show(needsParens) {
-        return parenthesize(`${intersectees.map(v => show(v, true)).join(' & ')}`, needsParens);
-      },
     },
   );
 }

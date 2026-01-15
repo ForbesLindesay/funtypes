@@ -1,9 +1,11 @@
-const { spawnSync } = require('child_process');
-const { mkdtempSync, writeFileSync, mkdirSync, readFileSync } = require('fs');
-const { tmpdir } = require('os');
-const { join, resolve, relative } = require('path');
+import { spawnSync } from 'child_process';
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join, resolve, relative } from 'path';
 
-const { parse } = require('@babel/parser');
+import { parse } from '@babel/parser';
+
+const __dirname = import.meta.dirname;
 
 function getExports(filename) {
   const ast = parse(readFileSync(`${__dirname}/../${filename}`, `utf8`), {
@@ -20,7 +22,7 @@ function getExports(filename) {
       case 'ExportNamedDeclaration':
         for (const specifier of statement.specifiers) {
           const exportKind =
-            specifier.exportKind === 'type' ? 'type' : statement.exportKind ?? 'value';
+            specifier.exportKind === 'type' ? 'type' : (statement.exportKind ?? 'value');
           exports[exportKind].push(specifier.exported.name);
         }
         break;
@@ -67,8 +69,8 @@ const assertions = [
       `strictEqual(t.${n} === undefined, false, "${n} should be exported in the default 'funtypes' entrypoint");`,
       `strictEqual(typeof t.${n}, typeof r.${n}, "${n} should have the same type in both entrypoints");`,
     ]),
-  `strictEqual(t.Object({}).isReadonly, false, "Object should not be readonly in the default 'funtypes' entrypoint");`,
-  `strictEqual(r.Object({}).isReadonly, true, "Object should be readonly in the 'funtypes/readonly' entrypoint");`,
+  `//@ts-ignore-error\nstrictEqual(t.Object({}).introspection.isReadonly, false, "Object should not be readonly in the default 'funtypes' entrypoint");`,
+  `//@ts-ignore-error\nstrictEqual(r.Object({}).introspection.isReadonly, true, "Object should be readonly in the 'funtypes/readonly' entrypoint");`,
 ];
 
 const dir = mkdtempSync(join(tmpdir(), `funtypes`));

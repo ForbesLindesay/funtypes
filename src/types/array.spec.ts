@@ -1,116 +1,125 @@
-import * as ta from 'type-assertions';
-import { Array, ReadonlyArray, Literal, Object } from '..';
+import { readFileSync } from 'fs';
+import * as ft from '..';
 
-const recordType = Object({ value: Literal(42) });
+const recordType = ft.Object({ value: ft.Literal(42) });
 const record = { value: 42 };
 
+export const array = ft.Array(recordType);
 test('Array', () => {
-  const dictionary = Array(recordType);
-  ta.assert<ta.Equal<ReturnType<typeof dictionary['parse']>, { value: 42 }[]>>();
-  expect(dictionary.safeParse([record, record, record])).toMatchInlineSnapshot(`
-    Object {
+  expect(ft.showType(array)).toEqual('{ value: 42 }[]');
+  expect(array.safeParse([record, record, record])).toMatchInlineSnapshot(`
+    {
       "success": true,
-      "value": Array [
-        Object {
+      "value": [
+        {
           "value": 42,
         },
-        Object {
+        {
           "value": 42,
         },
-        Object {
+        {
           "value": 42,
         },
       ],
     }
   `);
-  expect(dictionary.safeParse([record, 10, record])).toMatchInlineSnapshot(`
-    Object {
-      "fullError": Array [
-        "Unable to assign [{value: 42}, 10, {value: 42}] to { value: 42; }[]",
-        Array [
+  expect(array.safeParse([record, 10, record])).toMatchInlineSnapshot(`
+    {
+      "fullError": [
+        "Unable to assign [{value: 42}, 10, {value: 42}] to { value: 42 }[]",
+        [
           "The types of [1] are not compatible",
-          Array [
-            "Expected { value: 42; }, but was 10",
+          [
+            "Expected { value: 42 }, but was 10",
           ],
         ],
       ],
       "key": "[1]",
-      "message": "Expected { value: 42; }, but was 10",
+      "message": "Expected { value: 42 }, but was 10",
       "success": false,
     }
   `);
 });
 
-test('Array.asReadonly', () => {
-  const dictionary = Array(recordType).asReadonly();
-  ta.assert<ta.Equal<ReturnType<typeof dictionary['parse']>, readonly { value: 42 }[]>>();
-  expect(dictionary.safeParse([record, record, record])).toMatchInlineSnapshot(`
-    Object {
-      "success": true,
-      "value": Array [
-        Object {
-          "value": 42,
-        },
-        Object {
-          "value": 42,
-        },
-        Object {
-          "value": 42,
-        },
-      ],
-    }
-  `);
-  expect(dictionary.safeParse([record, 10, record])).toMatchInlineSnapshot(`
-    Object {
-      "fullError": Array [
-        "Unable to assign [{value: 42}, 10, {value: 42}] to readonly { value: 42; }[]",
-        Array [
-          "The types of [1] are not compatible",
-          Array [
-            "Expected { value: 42; }, but was 10",
-          ],
-        ],
-      ],
-      "key": "[1]",
-      "message": "Expected { value: 42; }, but was 10",
-      "success": false,
-    }
-  `);
-});
-
+export const readonlyArray = ft.ReadonlyArray(recordType);
 test('ReadonlyArray', () => {
-  const dictionary = ReadonlyArray(recordType);
-  ta.assert<ta.Equal<ReturnType<typeof dictionary['parse']>, readonly { value: 42 }[]>>();
-  expect(dictionary.safeParse([record, record, record])).toMatchInlineSnapshot(`
-    Object {
+  expect(ft.showType(readonlyArray)).toEqual('readonly { value: 42 }[]');
+  expect(readonlyArray.safeParse([record, record, record])).toMatchInlineSnapshot(`
+    {
       "success": true,
-      "value": Array [
-        Object {
+      "value": [
+        {
           "value": 42,
         },
-        Object {
+        {
           "value": 42,
         },
-        Object {
+        {
           "value": 42,
         },
       ],
     }
   `);
-  expect(dictionary.safeParse([record, 10, record])).toMatchInlineSnapshot(`
-    Object {
-      "fullError": Array [
-        "Unable to assign [{value: 42}, 10, {value: 42}] to readonly { value: 42; }[]",
-        Array [
+  expect(readonlyArray.safeParse([record, 10, record])).toMatchInlineSnapshot(`
+    {
+      "fullError": [
+        "Unable to assign [{value: 42}, 10, {value: 42}] to readonly { value: 42 }[]",
+        [
           "The types of [1] are not compatible",
-          Array [
-            "Expected { value: 42; }, but was 10",
+          [
+            "Expected { value: 42 }, but was 10",
           ],
         ],
       ],
       "key": "[1]",
-      "message": "Expected { value: 42; }, but was 10",
+      "message": "Expected { value: 42 }, but was 10",
       "success": false,
     }
+  `);
+});
+
+export const arrayOfUnions = ft.Array(ft.Union(ft.Literal(1), ft.Literal(2)));
+test('Array(Union)', () => {
+  expect(ft.showType(arrayOfUnions)).toEqual('(1 | 2)[]');
+  expect(arrayOfUnions.safeParse([1, 2, 1, 2])).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": [
+        1,
+        2,
+        1,
+        2,
+      ],
+    }
+  `);
+  expect(arrayOfUnions.safeParse([1, 10, 2])).toMatchInlineSnapshot(`
+    {
+      "fullError": [
+        "Unable to assign [1, 10, 2] to (1 | 2)[]",
+        [
+          "The types of [1] are not compatible",
+          [
+            "Expected 1 | 2, but was 10",
+          ],
+        ],
+      ],
+      "key": "[1]",
+      "message": "Expected 1 | 2, but was 10",
+      "success": false,
+    }
+  `);
+});
+
+test('Exported types', () => {
+  expect(readFileSync(`lib/types/array.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
+    "import * as ft from '..';
+    export declare const array: ft.Codec<{
+        value: 42;
+    }[]>;
+    export declare const readonlyArray: ft.Codec<readonly {
+        value: 42;
+    }[]>;
+    export declare const arrayOfUnions: ft.Codec<(1 | 2)[]>;
+    "
   `);
 });

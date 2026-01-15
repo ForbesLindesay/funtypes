@@ -1,104 +1,108 @@
-import { KeyOf } from '..';
-import show from '../show';
+import { readFileSync } from 'fs';
 
-const StringObjectKeys = {
+import * as ft from '..';
+
+export const StringObjectKeys = ft.KeyOf({
   foo: 1,
   bar: 2,
-};
+});
 
-const NumbericObjectKeys = {
+export const NumericObjectKeys = ft.KeyOf({
   2: 1,
   4: '2',
-};
+});
 
-const MixedObjectKeys = {
+export const MixedObjectKeys = ft.KeyOf({
   foo: 'bar',
   5: 1,
-  '4': 3,
-};
+  '4': 3, // a known issue is that at runtime we'll allow the number 4 here, but there's no good way to tell TypeScript we won't only accept the string "4"
+});
 
 test('Numeric Object Keys', () => {
-  expect(KeyOf(NumbericObjectKeys).safeParse(2)).toMatchInlineSnapshot(`
-    Object {
+  expect(NumericObjectKeys.safeParse(2)).toMatchInlineSnapshot(`
+    {
       "success": true,
       "value": 2,
     }
   `);
-  expect(KeyOf(NumbericObjectKeys).safeParse('2')).toMatchInlineSnapshot(`
-    Object {
+  expect(NumericObjectKeys.safeParse('2')).toMatchInlineSnapshot(`
+    {
       "success": true,
       "value": "2",
     }
   `);
-  expect(KeyOf(NumbericObjectKeys).safeParse('foobar')).toMatchInlineSnapshot(`
-    Object {
-      "message": "Expected \\"2\\" | \\"4\\", but was \\"foobar\\"",
+  expect(NumericObjectKeys.safeParse('foobar')).toMatchInlineSnapshot(`
+    {
+      "message": "Expected "2" | "4", but was "foobar"",
       "success": false,
     }
   `);
-  expect(KeyOf(NumbericObjectKeys).safeParse('5')).toMatchInlineSnapshot(`
-    Object {
-      "message": "Expected \\"2\\" | \\"4\\", but was \\"5\\"",
+  expect(NumericObjectKeys.safeParse('5')).toMatchInlineSnapshot(`
+    {
+      "message": "Expected "2" | "4", but was "5"",
       "success": false,
     }
   `);
-  const typed: keyof typeof NumbericObjectKeys = KeyOf(NumbericObjectKeys).parse(2);
+  expect(NumericObjectKeys.parse(2)).toBe(2);
 
-  expect(typed).toBe(2);
-
-  expect(show(KeyOf(NumbericObjectKeys))).toMatchInlineSnapshot(`"\\"2\\" | \\"4\\""`);
+  expect(ft.showType(NumericObjectKeys)).toMatchInlineSnapshot(`""2" | "4""`);
 });
 
 test('String Object Keys', () => {
-  expect(KeyOf(StringObjectKeys).safeParse('foo')).toMatchInlineSnapshot(`
-    Object {
+  expect(StringObjectKeys.safeParse('foo')).toMatchInlineSnapshot(`
+    {
       "success": true,
       "value": "foo",
     }
   `);
-  expect(KeyOf(StringObjectKeys).safeParse(55)).toMatchInlineSnapshot(`
-    Object {
-      "message": "Expected \\"bar\\" | \\"foo\\", but was 55",
+  expect(StringObjectKeys.safeParse(55)).toMatchInlineSnapshot(`
+    {
+      "message": "Expected "bar" | "foo", but was 55",
       "success": false,
     }
   `);
-  const typed: keyof typeof StringObjectKeys = KeyOf(StringObjectKeys).parse('bar');
+  expect(StringObjectKeys.parse('bar')).toBe('bar');
 
-  expect(typed).toBe('bar');
-
-  expect(show(KeyOf(StringObjectKeys))).toMatchInlineSnapshot(`"\\"bar\\" | \\"foo\\""`);
+  expect(ft.showType(StringObjectKeys)).toMatchInlineSnapshot(`""bar" | "foo""`);
 });
 
 test('Mixed Object Keys', () => {
-  expect(KeyOf(MixedObjectKeys).safeParse('foo')).toMatchInlineSnapshot(`
-    Object {
+  expect(MixedObjectKeys.safeParse('foo')).toMatchInlineSnapshot(`
+    {
       "success": true,
       "value": "foo",
     }
   `);
-  expect(KeyOf(MixedObjectKeys).safeParse(5)).toMatchInlineSnapshot(`
-    Object {
+  expect(MixedObjectKeys.safeParse(5)).toMatchInlineSnapshot(`
+    {
       "success": true,
       "value": 5,
     }
   `);
-  expect(KeyOf(MixedObjectKeys).safeParse('foobar')).toMatchInlineSnapshot(`
-    Object {
-      "message": "Expected \\"4\\" | \\"5\\" | \\"foo\\", but was \\"foobar\\"",
+  expect(MixedObjectKeys.safeParse('foobar')).toMatchInlineSnapshot(`
+    {
+      "message": "Expected "4" | "5" | "foo", but was "foobar"",
       "success": false,
     }
   `);
-  expect(KeyOf(MixedObjectKeys).safeParse(4)).toMatchInlineSnapshot(`
-    Object {
+  expect(MixedObjectKeys.safeParse(4)).toMatchInlineSnapshot(`
+    {
       "success": true,
       "value": 4,
     }
   `);
-  const stringNumber: keyof typeof MixedObjectKeys = KeyOf(MixedObjectKeys).parse('4');
-  expect(stringNumber).toBe('4');
+  expect(MixedObjectKeys.parse('4')).toBe('4');
+  expect(MixedObjectKeys.parse(5)).toBe(5);
 
-  const number: keyof typeof MixedObjectKeys = KeyOf(MixedObjectKeys).parse(5);
-  expect(number).toBe(5);
+  expect(ft.showType(MixedObjectKeys)).toMatchInlineSnapshot(`""4" | "5" | "foo""`);
+});
 
-  expect(show(KeyOf(MixedObjectKeys))).toMatchInlineSnapshot(`"\\"4\\" | \\"5\\" | \\"foo\\""`);
+test('Exported types', () => {
+  expect(readFileSync(`lib/types/KeyOf.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
+    "import * as ft from '..';
+    export declare const StringObjectKeys: ft.Codec<"foo" | "bar">;
+    export declare const NumericObjectKeys: ft.Codec<2 | "2" | 4 | "4">;
+    export declare const MixedObjectKeys: ft.Codec<"foo" | "4" | "5" | 5>;
+    "
+  `);
 });

@@ -1,20 +1,17 @@
 import {
   Codec,
-  Static,
   create,
-  RuntypeBase,
+  Runtype,
   InnerValidateHelper,
-  innerValidate,
-  createVisitedState,
-  OpaqueVisitedState,
   assertRuntype,
   unwrapRuntype,
   getFields,
+  showType,
+  parenthesize,
+  showValue,
 } from '../runtype';
-import show, { parenthesize } from '../show';
-import { LiteralValue, isLiteralRuntype } from './literal';
+import { LiteralValue, Null } from './literal';
 import { lazyValue } from './lazy';
-import { isObjectRuntype } from './Object';
 import {
   andError,
   expected,
@@ -25,26 +22,7 @@ import {
   typesAreNotCompatible,
   unableToAssign,
 } from '../result';
-import { isTupleRuntype } from './tuple';
-import showValue from '../showValue';
-import { isIntersectRuntype } from './intersect';
-
-export type StaticUnion<TAlternatives extends readonly RuntypeBase<unknown>[]> = {
-  [key in keyof TAlternatives]: TAlternatives[key] extends RuntypeBase<unknown>
-    ? Static<TAlternatives[key]>
-    : unknown;
-}[number];
-
-export interface Union<TAlternatives extends readonly RuntypeBase<unknown>[]>
-  extends Codec<StaticUnion<TAlternatives>> {
-  readonly tag: 'union';
-  readonly alternatives: TAlternatives;
-  match: Match<TAlternatives>;
-}
-
-export function isUnionType(runtype: RuntypeBase): runtype is Union<RuntypeBase<unknown>[]> {
-  return 'tag' in runtype && (runtype as Union<RuntypeBase<unknown>[]>).tag === 'union';
-}
+import { LiteralIntrospection } from '../introspection';
 
 function mapGet<TKey, TValue>(map: Map<TKey, TValue>) {
   return (key: TKey, fn: () => TValue) => {
@@ -57,35 +35,35 @@ function mapGet<TKey, TValue>(map: Map<TKey, TValue>) {
 }
 
 function findFields<TResult>(
-  alternative: RuntypeBase<TResult>,
+  alternative: Runtype<TResult>,
   mode: 'p' | 's' | 't',
-): [string, RuntypeBase][] {
+): [string, Runtype][] {
   const underlying = unwrapRuntype(alternative, mode);
-  const fields: [string, RuntypeBase][] = [];
-  const pushField = (fieldName: string, type: RuntypeBase) => {
+  const fields: [string, Runtype][] = [];
+  const pushField = (fieldName: string, type: Runtype) => {
     const f = unwrapRuntype(type, mode);
-    if (isUnionType(f)) {
-      for (const type of f.alternatives) {
+    if (f.introspection.tag === 'union') {
+      for (const type of f.introspection.alternatives) {
         pushField(fieldName, type);
       }
     } else {
       fields.push([fieldName, f]);
     }
   };
-  if (isObjectRuntype(underlying) && !underlying.isPartial) {
-    for (const fieldName of Object.keys(underlying.fields)) {
-      pushField(fieldName, underlying.fields[fieldName]);
+  if (underlying.introspection.tag === 'object' && !underlying.introspection.isPartial) {
+    for (const [fieldName, fieldType] of Object.entries(underlying.introspection.fields)) {
+      pushField(fieldName, fieldType);
     }
-  } else if (isTupleRuntype(underlying)) {
-    underlying.components.forEach((type, i) => {
+  } else if (underlying.introspection.tag === 'tuple') {
+    underlying.introspection.components.forEach((type, i) => {
       pushField(`${i}`, type);
     });
-  } else if (isIntersectRuntype(underlying)) {
-    for (const type of underlying.intersectees) {
+  } else if (underlying.introspection.tag === 'intersect') {
+    for (const type of underlying.introspection.intersectees) {
       fields.push(...findFields(type, mode));
     }
-  } else if (isUnionType(underlying)) {
-    const alternatives = underlying.alternatives.map(type => findFields(type, mode));
+  } else if (underlying.introspection.tag === 'union') {
+    const alternatives = underlying.introspection.alternatives.map(type => findFields(type, mode));
     const fieldNames = intersect(alternatives.map(v => new Set(v.map(([fieldName]) => fieldName))));
     for (const v of alternatives) {
       for (const [fieldName, type] of v) {
@@ -111,13 +89,13 @@ function intersect<T>(sets: Set<T>[]) {
 }
 interface Discriminant<TResult> {
   largestDiscriminant: number;
-  fieldTypes: Map<LiteralValue, Set<RuntypeBase<TResult>>>;
+  fieldTypes: Map<LiteralValue, Set<Runtype<TResult>>>;
 }
 function createDiscriminant<TResult>(): Discriminant<TResult> {
   return { largestDiscriminant: 0, fieldTypes: new Map() };
 }
 function findDiscriminator<TResult>(
-  recordAlternatives: readonly (readonly [RuntypeBase<TResult>, [string, RuntypeBase][]])[],
+  recordAlternatives: readonly (readonly [Runtype<TResult>, [string, Runtype][]])[],
 ) {
   const commonFieldNames = intersect(
     recordAlternatives.map(([, fields]) => new Set(fields.map(([fieldName]) => fieldName))),
@@ -131,9 +109,9 @@ function findDiscriminator<TResult>(
   for (const [type, fields] of recordAlternatives) {
     for (const [fieldName, field] of fields) {
       if (commonFieldNames.has(fieldName)) {
-        if (isLiteralRuntype(field)) {
+        if (field.introspection.tag === 'literal') {
           const discriminant = mapGet(commonLiteralFields)(fieldName, createDiscriminant);
-          const typesForThisDiscriminant = discriminant.fieldTypes.get(field.value);
+          const typesForThisDiscriminant = discriminant.fieldTypes.get(field.introspection.value);
           if (typesForThisDiscriminant) {
             typesForThisDiscriminant.add(type);
             discriminant.largestDiscriminant = Math.max(
@@ -142,7 +120,7 @@ function findDiscriminator<TResult>(
             );
           } else {
             discriminant.largestDiscriminant = Math.max(discriminant.largestDiscriminant, 1);
-            discriminant.fieldTypes.set(field.value, new Set([type]));
+            discriminant.fieldTypes.set(field.introspection.value, new Set([type]));
           }
         } else {
           commonFieldNames.delete(fieldName);
@@ -174,28 +152,34 @@ function findDiscriminator<TResult>(
 /**
  * Construct a union runtype from runtypes for its alternatives.
  */
-export function Union<
-  TAlternatives extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]],
->(...alternatives: TAlternatives): Union<TAlternatives> {
+export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
+  ...alternatives: TAlternatives
+): Codec<
+  {
+    [key in keyof TAlternatives]: TAlternatives[key] extends Runtype<infer T> ? T : unknown;
+  }[number]
+> {
+  type TResult = {
+    [key in keyof TAlternatives]: TAlternatives[key] extends Runtype<infer T> ? T : unknown;
+  }[number];
   assertRuntype(...alternatives);
-  type TResult = StaticUnion<TAlternatives>;
   type InnerValidate = (x: any, innerValidate: InnerValidateHelper) => Result<TResult>;
-  const flatAlternatives: RuntypeBase<TResult>[] = [];
+  const flatAlternatives: Runtype<TResult>[] = [];
   for (const a of alternatives) {
-    if (isUnionType(a)) {
-      flatAlternatives.push(...(a.alternatives as any));
+    if (a.introspection.tag === 'union') {
+      flatAlternatives.push(...(a.introspection.alternatives as any));
     } else {
       flatAlternatives.push(a as any);
     }
   }
   function validateWithKey(
     tag: string,
-    types: Map<LiteralValue, RuntypeBase<TResult>[]>,
+    types: Map<LiteralValue, Runtype<TResult>[]>,
   ): InnerValidate {
     const typeStrings = new Set<string>();
     for (const t of types.values()) {
       for (const v of t) {
-        typeStrings.add(show(v, true));
+        typeStrings.add(showType(v, true));
       }
     }
     const typesString = Array.from(typeStrings).join(' | ');
@@ -240,7 +224,7 @@ export function Union<
   }
 
   function validateWithoutKeyInner(
-    alternatives: readonly RuntypeBase<TResult>[],
+    alternatives: readonly Runtype<TResult>[],
     value: any,
     innerValidate: InnerValidateHelper,
   ): Result<TResult> {
@@ -265,20 +249,35 @@ export function Union<
       fullError,
     });
   }
-  function validateWithoutKey(alternatives: readonly RuntypeBase<TResult>[]): InnerValidate {
+  function validateWithoutKey(alternatives: readonly Runtype<TResult>[]): InnerValidate {
     return (value, innerValidate) => validateWithoutKeyInner(alternatives, value, innerValidate);
   }
-  function validateOnlyOption(innerType: RuntypeBase<TResult>): InnerValidate {
+  function validateOnlyOption(innerType: Runtype<TResult>): InnerValidate {
     return (value, innerValidate) => innerValidate(innerType, value);
+  }
+  function validateLiteral(alternatives: Runtype<TResult>[]): InnerValidate {
+    const literalValues = new Set(
+      alternatives.map(a => (a.introspection as LiteralIntrospection).value),
+    );
+    return value => {
+      if (literalValues.has(value)) {
+        return success(value);
+      } else {
+        return expected(runtype, value);
+      }
+    };
   }
 
   // This must be lazy to avoid eagerly evaluating any circular references
   const validatorOf = (mode: 'p' | 's' | 't'): InnerValidate => {
     const nonNeverAlternatives = flatAlternatives.filter(
-      a => unwrapRuntype(a, mode).tag !== 'never',
+      a => unwrapRuntype(a, mode).introspection.tag !== 'never',
     );
     if (nonNeverAlternatives.length === 1) {
       return validateOnlyOption(nonNeverAlternatives[0]);
+    }
+    if (flatAlternatives.every(a => a.introspection.tag === 'literal')) {
+      return validateLiteral(flatAlternatives);
     }
     const withFields = nonNeverAlternatives.map(a => [a, findFields(a, mode)] as const);
     const withAtLeastOneField = withFields.filter(a => a[1].length !== 0);
@@ -330,57 +329,35 @@ export function Union<
     s: lazyValue(() => getFieldsForMode(`s`)),
   };
 
-  const runtype: Union<TAlternatives> = create<Union<TAlternatives>>(
-    'union',
+  const runtype: Codec<TResult> = create<TResult>(
     {
-      p: (value, visited) => {
+      _parse: (value, visited) => {
         return innerValidator().p(value, visited);
       },
-      s: (value, visited) => {
+      _serialize: (value, visited) => {
         return innerValidator().s(value, visited);
       },
-      t: (value, visited) => {
+      _test: (value, visited) => {
         const result = innerValidator().t(value, (t, v) => visited(t, v) || success(v as any));
         return result.success ? undefined : result;
       },
-      f: mode => fields[mode](),
+      _fields: mode => fields[mode](),
+      _showType(needsParens) {
+        return parenthesize(
+          `${flatAlternatives.map(v => showType(v, true)).join(' | ')}`,
+          needsParens,
+        );
+      },
     },
     {
-      alternatives: flatAlternatives as any,
-      match: match as any,
-      show(needsParens) {
-        return parenthesize(`${flatAlternatives.map(v => show(v, true)).join(' | ')}`, needsParens);
-      },
+      tag: 'union',
+      alternatives: flatAlternatives,
     },
   );
 
   return runtype;
-
-  function match(...cases: any[]) {
-    return (x: any) => {
-      const visited: OpaqueVisitedState = createVisitedState();
-      for (let i = 0; i < alternatives.length; i++) {
-        const input = innerValidate(alternatives[i], x, visited, false);
-        if (input.success) {
-          return cases[i](input.value);
-        }
-      }
-      // if none of the types matched, we should fail with an assertion error
-      runtype.assert(x);
-    };
-  }
 }
 
-export interface Match<A extends readonly RuntypeBase<unknown>[]> {
-  <Z>(
-    ...a: { [key in keyof A]: A[key] extends RuntypeBase<unknown> ? Case<A[key], Z> : never }
-  ): Matcher<A, Z>;
+export function Nullable<T>(type: Codec<T>): Codec<T | null> {
+  return Union(type, Null);
 }
-
-export type Case<T extends RuntypeBase<unknown>, Result> = (v: Static<T>) => Result;
-
-export type Matcher<A extends readonly RuntypeBase<unknown>[], Z> = (
-  x: {
-    [key in keyof A]: A[key] extends RuntypeBase<infer Type> ? Type : unknown;
-  }[number],
-) => Z;

@@ -1,34 +1,27 @@
-import { RuntypeBase, Static, create, Codec, assertRuntype } from '../runtype';
+import { create, Codec, assertRuntype, showValue } from '../runtype';
 
-export type ConstraintCheck<A extends RuntypeBase<unknown>> = (x: Static<A>) => boolean | string;
-
-export interface Named<TUnderlying extends RuntypeBase<unknown>>
-  extends Codec<Static<TUnderlying>> {
-  readonly tag: 'named';
-  readonly underlying: TUnderlying;
-  readonly name: string;
-}
-
-export function Named<TUnderlying extends RuntypeBase<unknown>>(
+export function Named<TUnderlying>(
   name: string,
-  underlying: TUnderlying,
-): Named<TUnderlying> {
+  underlying: Codec<TUnderlying>,
+): Codec<TUnderlying> {
   assertRuntype(underlying);
-  const runtype: Named<TUnderlying> = create<Named<TUnderlying>>(
-    'named',
+  return create<TUnderlying>(
     {
-      p: (value, _innerValidate, innerValidateToPlaceholder) => {
-        return innerValidateToPlaceholder(underlying as any, value);
-      },
-      u: () => underlying,
+      _parse: (value, _innerValidate, innerValidateToPlaceholder) =>
+        innerValidateToPlaceholder(underlying, value),
+      _underlyingType: () => underlying,
+      _showType: () => name,
+      _asMutable: asMutable => Named(name, asMutable(underlying)),
+      _asReadonly: asReadonly => Named(name, asReadonly(underlying)),
+      _pick: (keys, pick) =>
+        Named(`Pick<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, pick(underlying, keys)),
+      _omit: (keys, omit) =>
+        Named(`Omit<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, omit(underlying, keys)),
     },
     {
+      tag: 'named',
       underlying,
       name,
-      show() {
-        return name;
-      },
     },
   );
-  return runtype;
 }

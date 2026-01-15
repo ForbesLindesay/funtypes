@@ -6,101 +6,94 @@ import {
   typesAreNotCompatible,
   unableToAssign,
 } from '../result';
-import { create, RuntypeBase, Codec, createValidationPlaceholder, assertRuntype } from '../runtype';
-import show from '../show';
-
-export type StaticTuple<TElements extends readonly RuntypeBase<unknown>[]> = {
-  [key in keyof TElements]: TElements[key] extends RuntypeBase<infer E> ? E : unknown;
-};
-export type ReadonlyStaticTuple<TElements extends readonly RuntypeBase<unknown>[]> = {
-  readonly [key in keyof TElements]: TElements[key] extends RuntypeBase<infer E> ? E : unknown;
-};
-
-export interface Tuple<
-  TElements extends readonly RuntypeBase<unknown>[] = readonly RuntypeBase<unknown>[],
-> extends Codec<StaticTuple<TElements>> {
-  readonly tag: 'tuple';
-  readonly components: TElements;
-  readonly isReadonly: false;
-}
-
-export interface ReadonlyTuple<
-  TElements extends readonly RuntypeBase<unknown>[] = readonly RuntypeBase<unknown>[],
-> extends Codec<ReadonlyStaticTuple<TElements>> {
-  readonly tag: 'tuple';
-  readonly components: TElements;
-  readonly isReadonly: true;
-}
-
-export function isTupleRuntype(runtype: RuntypeBase): runtype is Tuple<readonly RuntypeBase[]> {
-  return 'tag' in runtype && (runtype as Tuple<readonly RuntypeBase[]>).tag === 'tuple';
-}
+import {
+  create,
+  Runtype,
+  Codec,
+  createValidationPlaceholder,
+  assertRuntype,
+  showType,
+} from '../runtype';
 
 /**
  * Construct a tuple runtype from runtypes for each of its elements.
  */
-export function Tuple<
-  T extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]] | readonly [],
->(...components: T): Tuple<T> {
+export function Tuple<const T extends readonly Runtype<unknown>[]>(
+  ...components: T
+): Codec<{
+  -readonly [key in keyof T]: T[key] extends Runtype<infer E> ? E : unknown;
+}> {
+  return TupleCore(components, false);
+}
+
+export function ReadonlyTuple<const T extends readonly Runtype<unknown>[]>(
+  ...components: T
+): Codec<{
+  readonly [key in keyof T]: T[key] extends Runtype<infer E> ? E : unknown;
+}> {
+  return TupleCore(components, true);
+}
+
+function TupleCore<const T extends readonly Runtype<unknown>[]>(
+  components: T,
+  isReadonly: boolean,
+): Codec<{
+  -readonly [key in keyof T]: T[key] extends Runtype<infer E> ? E : unknown;
+}> {
   assertRuntype(...components);
-  const result = create<Tuple<T>>(
-    'tuple',
-    (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
-      if (!Array.isArray(x)) {
-        return expected(`tuple to be an array`, x);
-      }
-
-      if (x.length !== components.length) {
-        return expected(`an array of length ${components.length}`, x.length);
-      }
-
-      return createValidationPlaceholder([...x] as any, placeholder => {
-        let fullError: FullError | undefined = undefined;
-        let firstError: Failure | undefined;
-        for (let i = 0; i < components.length; i++) {
-          let validatedComponent = innerValidate(
-            components[i],
-            x[i],
-            sealed && sealed.deep ? { deep: true } : false,
-          );
-
-          if (!validatedComponent.success) {
-            if (!fullError) {
-              fullError = unableToAssign(x, result);
-            }
-            fullError.push(typesAreNotCompatible(`[${i}]`, validatedComponent));
-            firstError =
-              firstError ||
-              failure(validatedComponent.message, {
-                key: validatedComponent.key ? `[${i}].${validatedComponent.key}` : `[${i}]`,
-                fullError: fullError,
-              });
-          } else {
-            placeholder[i] = validatedComponent.value;
-          }
+  const result = create<{
+    -readonly [key in keyof T]: T[key] extends Runtype<infer E> ? E : unknown;
+  }>(
+    {
+      _parse: (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
+        if (!Array.isArray(x)) {
+          return expected(`tuple to be an array`, x);
         }
-        return firstError;
-      });
+
+        if (x.length !== components.length) {
+          return expected(`an array of length ${components.length}`, x.length);
+        }
+
+        return createValidationPlaceholder([...x] as any, placeholder => {
+          let fullError: FullError | undefined = undefined;
+          let firstError: Failure | undefined;
+          for (let i = 0; i < components.length; i++) {
+            let validatedComponent = innerValidate(
+              components[i],
+              x[i],
+              sealed && sealed.deep ? { deep: true } : false,
+            );
+
+            if (!validatedComponent.success) {
+              if (!fullError) {
+                fullError = unableToAssign(x, result);
+              }
+              fullError.push(typesAreNotCompatible(`[${i}]`, validatedComponent));
+              firstError =
+                firstError ||
+                failure(validatedComponent.message, {
+                  key: validatedComponent.key ? `[${i}].${validatedComponent.key}` : `[${i}]`,
+                  fullError: fullError,
+                });
+            } else {
+              placeholder[i] = validatedComponent.value;
+            }
+          }
+          return firstError;
+        });
+      },
+      _showType: () =>
+        `${isReadonly ? `readonly ` : ``}[${(components as readonly Runtype<unknown>[])
+          .map(e => showType(e, false))
+          .join(', ')}]`,
+      _asMutable: () => TupleCore(components, false),
+      _asReadonly: () => TupleCore(components, true),
     },
     {
+      tag: 'tuple',
       components,
-      isReadonly: false,
-      show() {
-        return `${this.isReadonly ? `readonly ` : ``}[${(
-          components as readonly RuntypeBase<unknown>[]
-        )
-          .map(e => show(e, false))
-          .join(', ')}]`;
-      },
+      isReadonly,
     },
   );
   return result;
-}
-
-export function ReadonlyTuple<
-  T extends readonly [RuntypeBase<unknown>, ...RuntypeBase<unknown>[]] | readonly [],
->(...components: T): ReadonlyTuple<T> {
-  const tuple: any = Tuple(...components);
-  tuple.isReadonly = true;
-  return tuple;
 }

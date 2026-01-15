@@ -1,8 +1,5 @@
-import { RuntypeBase, Static } from './runtype';
+import { Runtype } from './runtype';
 
-export function assertType<TRuntypeBase extends RuntypeBase>(
-  rt: TRuntypeBase,
-  v: unknown,
-): asserts v is Static<TRuntypeBase> {
+export function assertType<T>(rt: Runtype<T>, v: unknown): asserts v is T {
   rt.assert(v);
 }

@@ -1,87 +1,75 @@
 import {
   create,
-  Static,
-  RuntypeBase,
+  Runtype,
   Codec,
   createValidationPlaceholder,
   assertRuntype,
+  showType,
 } from '../runtype';
-import show from '../show';
-import { String, Number } from './primative';
-import { Literal } from './literal';
-import { Constraint } from './constraint';
 import { lazyValue } from './lazy';
-import { Union } from './union';
 import { expected, failure, Result, typesAreNotCompatible } from '../result';
 
-export type KeyRuntypeBaseWithoutUnion =
-  | Pick<String, keyof RuntypeBase>
-  | Pick<Number, keyof RuntypeBase>
-  | Pick<Literal<string | number>, 'value' | keyof RuntypeBase>
-  | Pick<Constraint<KeyRuntypeBase, string | number>, 'underlying' | keyof RuntypeBase>;
-
-export type KeyRuntypeBase =
-  | KeyRuntypeBaseWithoutUnion
-  | Pick<Union<KeyRuntypeBaseWithoutUnion[]>, 'alternatives' | keyof RuntypeBase>;
-
-function getExpectedBaseType(key: KeyRuntypeBase): 'string' | 'number' | 'mixed' {
-  switch (key.tag) {
+function getExpectedBaseType(key: Runtype): 'string' | 'number' | 'mixed' {
+  switch (key.introspection.tag) {
     case 'string':
       return 'string';
     case 'number':
       return 'number';
-    case 'literal':
-      return typeof key.value as 'string' | 'number';
+    case 'literal': {
+      const valueType = typeof key.introspection.value as 'string' | 'number';
+      return valueType === 'string' || valueType === 'number' ? valueType : 'mixed';
+    }
     case 'union':
-      const baseTypes = key.alternatives.map(getExpectedBaseType);
+      const baseTypes = key.introspection.alternatives.map(getExpectedBaseType);
       return baseTypes.reduce((a, b) => (a === b ? a : 'mixed'), baseTypes[0]);
     case 'constraint':
-      return getExpectedBaseType(key.underlying);
+      return getExpectedBaseType(key.introspection.underlying);
+    case 'brand':
+      return getExpectedBaseType(key.introspection.entity);
+    default:
+      return 'mixed';
   }
-}
-
-export interface Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
-  extends Codec<{ [_ in Static<K>]?: Static<V> }> {
-  readonly tag: 'record';
-  readonly key: K;
-  readonly value: V;
-  readonly isReadonly: false;
-}
-
-export interface ReadonlyRecord<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
-  extends Codec<{ readonly [_ in Static<K>]?: Static<V> }> {
-  readonly tag: 'record';
-  readonly key: K;
-  readonly value: V;
-  readonly isReadonly: true;
 }
 
 /**
  * Construct a runtype for arbitrary dictionaries.
  */
-export function Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>(
-  key: K,
-  value: V,
-): Record<K, V> {
+export function Record<K extends string | number, V>(
+  key: Codec<K>,
+  value: Codec<V>,
+): Codec<{ [_ in K]?: V }> {
+  return RecordCore(key, value, false);
+}
+
+export function ReadonlyRecord<K extends string | number, V>(
+  key: Codec<K>,
+  value: Codec<V>,
+): Codec<{ readonly [_ in K]?: V }> {
+  return RecordCore(key, value, true);
+}
+
+function RecordCore<K extends string | number, V>(
+  key: Codec<K>,
+  value: Codec<V>,
+  isReadonly: boolean,
+): Codec<{ [_ in K]?: V }> {
   assertRuntype(key, value);
   const expectedBaseType = lazyValue(() => getExpectedBaseType(key));
-  const runtype: Record<K, V> = create<Record<K, V>>(
-    'record',
-    (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
-      if (x === null || x === undefined || typeof x !== 'object') {
-        return expected(runtype, x);
-      }
-
-      if (Object.getPrototypeOf(x) !== Object.prototype && Object.getPrototypeOf(x) !== null) {
-        if (!Array.isArray(x)) {
-          return failure(`Expected ${show(runtype)}, but was ${Object.getPrototypeOf(x)}`);
+  const runtype: Codec<{ [_ in K]?: V }> = create<{ [_ in K]?: V }>(
+    {
+      _parse: (x, innerValidate, _innerValidateToPlaceholder, _getFields, sealed) => {
+        if (x === null || x === undefined || typeof x !== 'object') {
+          return expected(runtype, x);
         }
-        return failure('Expected Record, but was Array');
-      }
 
-      return createValidationPlaceholder<{ [_ in Static<K>]?: Static<V> }>(
-        Object.create(null),
-        placeholder => {
+        if (Object.getPrototypeOf(x) !== Object.prototype && Object.getPrototypeOf(x) !== null) {
+          if (!Array.isArray(x)) {
+            return failure(`Expected ${showType(runtype)}, but was ${Object.getPrototypeOf(x)}`);
+          }
+          return failure('Expected Record, but was Array');
+        }
+
+        return createValidationPlaceholder<{ [_ in K]?: V }>(Object.create(null), placeholder => {
           for (const k in x) {
             let keyValidation: Result<string | number> | null = null;
             if (expectedBaseType() === 'number') {
@@ -96,7 +84,7 @@ export function Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
               }
             }
             if (!keyValidation.success) {
-              return expected(`record key to be ${show(key)}`, k);
+              return expected(`record key to be ${showType(key)}`, k);
             }
 
             const validated = innerValidate(
@@ -112,26 +100,19 @@ export function Record<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>
             }
             (placeholder as any)[keyValidation.value] = validated.value;
           }
-        },
-      );
+        });
+      },
+      _showType: () =>
+        `${isReadonly ? `Readonly` : ``}Record<${showType(key, false)}, ${showType(value, false)}>`,
+      _asMutable: () => RecordCore(key, value, false),
+      _asReadonly: () => RecordCore(key, value, true),
     },
     {
+      tag: 'record',
       key,
       value,
-      isReadonly: false,
-      show() {
-        return `{ [_: ${show(key, false)}]: ${show(value, false)} }`;
-      },
+      isReadonly,
     },
   );
   return runtype;
-}
-
-export function ReadonlyRecord<K extends KeyRuntypeBase, V extends RuntypeBase<unknown>>(
-  key: K,
-  value: V,
-): ReadonlyRecord<K, V> {
-  const record: any = Record(key, value);
-  record.isReadonly = true;
-  return record;
 }

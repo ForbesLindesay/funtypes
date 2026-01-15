@@ -1,59 +1,52 @@
 import { failure, Result } from '../result';
 import {
-  RuntypeBase,
-  Static,
+  Runtype,
   create,
   Codec,
   mapValidationPlaceholder,
   assertRuntype,
   innerGuard,
   createGuardVisitedState,
+  showType,
 } from '../runtype';
-import show from '../show';
 import { Never } from './never';
 
-export interface ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>
-  extends Codec<TParsed> {
-  readonly tag: 'parsed';
-  readonly underlying: TUnderlying;
-  readonly config: ParsedValueConfig<TUnderlying, TParsed>;
-}
-
-export interface ParsedValueConfig<TUnderlying extends RuntypeBase<unknown>, TParsed> {
+export interface ParsedValueConfig<TUnderlying, TParsed> {
   name?: string;
-  parse: (value: Static<TUnderlying>) => Result<TParsed>;
-  serialize?: (value: TParsed) => Result<Static<TUnderlying>>;
-  test?: RuntypeBase<TParsed>;
+  parse: (value: TUnderlying) => Result<TParsed>;
+  serialize?: (value: TParsed) => Result<TUnderlying>;
+  test?: Runtype<TParsed>;
 }
-export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
-  underlying: TUnderlying,
+export function ParsedValue<TUnderlying, TParsed>(
+  underlying: Runtype<TUnderlying>,
   config: ParsedValueConfig<TUnderlying, TParsed>,
-): ParsedValue<TUnderlying, TParsed> {
+): Codec<TParsed> {
   assertRuntype(underlying);
-  return create<ParsedValue<TUnderlying, TParsed>>(
-    'parsed',
+  return create<TParsed>(
     {
-      p: (value, _innerValidate, innerValidateToPlaceholder) => {
+      _parse: (value, _innerValidate, innerValidateToPlaceholder) => {
         return mapValidationPlaceholder<any, TParsed>(
           innerValidateToPlaceholder(underlying, value),
           source => config.parse(source),
           config.test,
         );
       },
-      t(value, internalTest, _sealed, isOptionalTest) {
+      _test(value, internalTest, _sealed, isOptionalTest) {
         return config.test
           ? internalTest(config.test, value)
           : isOptionalTest
-          ? undefined
-          : failure(
-              `${config.name || `ParsedValue<${show(underlying)}>`} does not support Runtype.test`,
-            );
+            ? undefined
+            : failure(
+                `${
+                  config.name || `ParsedValue<${showType(underlying)}>`
+                } does not support Runtype.test`,
+              );
       },
-      s(value, _internalSerialize, internalSerializeToPlaceholder, _getFields, sealed) {
+      _serialize(value, _internalSerialize, internalSerializeToPlaceholder, _getFields, sealed) {
         if (!config.serialize) {
           return failure(
             `${
-              config.name || `ParsedValue<${show(underlying)}>`
+              config.name || `ParsedValue<${showType(underlying)}>`
             } does not support Runtype.serialize`,
           );
         }
@@ -73,7 +66,7 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
 
         return internalSerializeToPlaceholder(underlying, serialized.value, false);
       },
-      u(mode) {
+      _underlyingType(mode) {
         switch (mode) {
           case 'p':
             return underlying;
@@ -83,14 +76,13 @@ export function ParsedValue<TUnderlying extends RuntypeBase<unknown>, TParsed>(
             return config.serialize ? config.test : Never;
         }
       },
+      _showType: () => config.name || `ParsedValue<${showType(underlying, false)}>`,
     },
     {
+      tag: 'parsed',
       underlying,
-      config,
-
-      show() {
-        return config.name || `ParsedValue<${show(underlying, false)}>`;
-      },
+      name: config.name,
+      test: config.test,
     },
   );
 }
