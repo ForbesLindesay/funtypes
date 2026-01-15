@@ -1,3 +1,7 @@
+import { provideHelpers } from './runtype';
+import { Constraint } from './types/constraint';
+import { ParsedValue } from './types/ParsedValue';
+
 export { assertType } from './assertType';
 export type { Runtype, Codec, Static } from './runtype';
 export type { Success, Failure, Result } from './result';
@@ -70,3 +74,8 @@ export type {
   SymbolIntrospection,
   BigIntIntrospection,
 } from './introspection';
+
+provideHelpers({
+  Constraint,
+  ParsedValue,
+});

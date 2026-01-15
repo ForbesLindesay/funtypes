@@ -1,8 +1,20 @@
+import type * as t from '.';
 import type { Result, Failure } from './result';
 
 import { ValidationError } from './errors';
 import { failure, success } from './result';
 import { RuntypeIntrospection } from './introspection';
+import { ParsedValueConfig } from './types/ParsedValue';
+
+// Importing these directly creates a cycle
+interface Helpers {
+  readonly Constraint: typeof t.Constraint;
+  readonly ParsedValue: typeof t.ParsedValue;
+}
+let helpers: Helpers;
+export function provideHelpers(h: Helpers) {
+  helpers = h;
+}
 
 export type InnerValidateHelper = <T>(runtype: Runtype<T>, value: unknown) => Result<T>;
 declare const internalSymbol: unique symbol;
@@ -171,6 +183,49 @@ export interface Codec<TParsed> extends Runtype<TParsed> {
    */
   safeSerialize: (x: TParsed) => Result<unknown>;
   toString: () => string;
+
+  /**
+   * Use an arbitrary constraint function to validate a runtype, and optionally
+   * to change its name and/or its static type.
+   *
+   * @template T - Optionally override the static type of the resulting runtype
+   * @param {(x: Static<this>) => boolean | string} constraint - Custom function
+   * that returns `true` if the constraint is satisfied, `false` or a custom
+   * error message if not.
+   * @param [options]
+   * @param {string} [options.name] - allows setting the name of this
+   * constrained runtype, which is helpful in reflection or diagnostic
+   * use-cases.
+   */
+  withConstraint<TConstrained extends TParsed = TParsed>(
+    constraint: (x: TParsed) => boolean | string,
+    options?: { name?: string },
+  ): Codec<TConstrained>;
+
+  /**
+   * Helper function to convert an underlying Runtype into another static type
+   * via a type guard function.  The static type of the runtype is inferred from
+   * the type of the test function.
+   *
+   * @template T - Typically inferred from the return type of the type guard
+   * function, so usually not needed to specify manually.
+   * @param {(x: Static<this>) => x is T} test - Type test function (see
+   * https://www.typescriptlang.org/docs/handbook/advanced-types.html#user-defined-type-guards)
+   *
+   * @param [options]
+   * @param {string} [options.name] - allows setting the name of this
+   * constrained runtype, which is helpful in reflection or diagnostic
+   * use-cases.
+   */
+  withGuard<TConstrained extends TParsed>(
+    test: (x: TParsed) => x is TConstrained,
+    options?: { name?: string },
+  ): Codec<TConstrained>;
+
+  /**
+   * Apply conversion functions when parsing/serializing this value
+   */
+  withParser<T>(value: ParsedValueConfig<TParsed, T>): Codec<T>;
 }
 /**
  * Obtains the static type associated with a Runtype.
@@ -201,6 +256,21 @@ export function create<T>(
     },
     safeSerialize,
     toString: () => `Runtype<${showType(A)}>`,
+    withConstraint<TConstrained extends T = T>(
+      constraint: (x: T) => boolean | string,
+      options?: { name?: string },
+    ): Codec<TConstrained> {
+      return helpers.Constraint(A, constraint, options);
+    },
+    withGuard<TConstrained extends T>(
+      constraint: (x: T) => x is TConstrained,
+      options?: { name?: string },
+    ): Codec<TConstrained> {
+      return helpers.Constraint<T, TConstrained>(A, constraint, options);
+    },
+    withParser<TParsedNew>(value: ParsedValueConfig<T, TParsedNew>): Codec<TParsedNew> {
+      return helpers.ParsedValue(A, value);
+    },
     [internal]:
       typeof internalImplementation === 'function'
         ? { _parse: internalImplementation }
