@@ -116,21 +116,32 @@ test('Intersect can handle tuple entries being converted', () => {
   `);
 });
 
+export const IntersectStringAndBrand = ft.Intersect(ft.String, ft.Brand('my_brand', ft.Unknown));
 test('Intersect can handle String + Brand', () => {
-  expect(ft.Intersect(ft.String, ft.Brand('my_brand', ft.Unknown)).safeParse('hello world'))
-    .toMatchInlineSnapshot(`
+  expect(IntersectStringAndBrand.safeParse('hello world')).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": "hello world",
     }
   `);
-  expect(ft.Intersect(ft.String, ft.Brand('my_brand', ft.Unknown)).safeParse(42))
-    .toMatchInlineSnapshot(`
+  expect(IntersectStringAndBrand.safeParse(42)).toMatchInlineSnapshot(`
     {
       "message": "Expected string, but was 42",
       "success": false,
     }
   `);
+});
+
+const objUnion = ft.Union(ft.Object({ a: ft.Number }), ft.Object({ b: ft.String }));
+export const IntersectUnions = ft.Intersect(
+  objUnion,
+  ft.Object({ c: ft.Boolean }),
+  ft.Object({ d: ft.Boolean }),
+);
+test('IntersectedUnions', () => {
+  expect(ft.showType(IntersectUnions)).toMatchInlineSnapshot(
+    `"({ a: number } | { b: string }) & { c: boolean } & { d: boolean }"`,
+  );
 });
 
 test('Intersect validates its inputs', () => {
@@ -142,12 +153,23 @@ test('Intersect validates its inputs', () => {
 test('Exported types', () => {
   expect(readFileSync(`lib/types/intersect.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
-    export declare const NamedURL: ft.Codec<{
+    export declare const NamedURL: ft.ObjectCodec<{
         name: string;
-    } & {
         url: URL;
     }>;
     export declare const intersectedTuple: ft.Codec<[string, unknown] & [unknown, URL]>;
+    export declare const IntersectStringAndBrand: ft.Codec<string & {
+        readonly __type__: "my_brand";
+    }>;
+    export declare const IntersectUnions: ft.ObjectCodec<{
+        a: number;
+        c: boolean;
+        d: boolean;
+    } | {
+        b: string;
+        c: boolean;
+        d: boolean;
+    }>;
     "
   `);
 });

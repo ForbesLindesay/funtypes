@@ -19,12 +19,12 @@ export function Named<TUnderlying>(
         innerValidateToPlaceholder(underlying, value),
       _underlyingType: () => underlying,
       _showType: () => name,
-      _asMutable: asMutable => Named(name, asMutable(underlying)),
-      _asReadonly: asReadonly => Named(name, asReadonly(underlying)),
-      _pick: (keys, pick) =>
-        Named(`Pick<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, pick(underlying, keys)),
-      _omit: (keys, omit) =>
-        Named(`Omit<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, omit(underlying, keys)),
+      _mapInternal: mapper => Named(name, mapper(underlying)),
+      _partial: asPartial => Named(`Partial<${name}>`, asPartial(underlying)),
+      _pick: (pick, keys) =>
+        Named(`Pick<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, pick(underlying)),
+      _omit: (omit, keys) =>
+        Named(`Omit<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, omit(underlying)),
     },
     {
       tag: 'named',

@@ -6,11 +6,19 @@ export function Omit<
 >(input: ObjectCodec<TObject>, keys: TKeys): ObjectCodec<Omit<TObject, TKeys[number]>> {
   assertRuntype(input);
   const internal = getInternal(input);
-  if (!internal._omit) {
+  const fn = internal._omit ?? internal._mapInternal;
+  if (!fn) {
     throw new Error(
-      `Omit: input runtype "${input.introspection.tag}" does not support 'omit' operation`,
+      `Omit: input runtype "${input.introspection.tag}" does not support the 'omit' operation`,
     );
   }
-  // @ts-expect-error
-  return internal._omit(keys, Omit);
+
+  const result = fn(
+    t =>
+      // @ts-expect-error Omit only allows ObjectCodec inputs
+      Omit(t, keys),
+    keys,
+  );
+  // @ts-expect-error Unsafe cast from Codec to ObjectCodec
+  return result;
 }

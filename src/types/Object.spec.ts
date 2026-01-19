@@ -65,6 +65,13 @@ test('Partial<Intersect>', () => {
     },
   });
 });
+export const PartialFromUnion = ft.Partial(
+  ft.Union(
+    ft.Object({ name: ft.String }),
+    ft.Object({ rank: ft.String }),
+    ft.Object({ home: ft.String }),
+  ),
+);
 
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Object.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
@@ -87,6 +94,13 @@ test('Exported types', () => {
     export declare const PartialCrewMemberFromIntersect: ft.ObjectCodec<{
         name?: string | undefined;
         rank?: string | undefined;
+        home?: string | undefined;
+    }>;
+    export declare const PartialFromUnion: ft.ObjectCodec<{
+        name?: string | undefined;
+    } | {
+        rank?: string | undefined;
+    } | {
         home?: string | undefined;
     }>;
     "

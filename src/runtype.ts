@@ -101,6 +101,7 @@ export interface InternalValidation<TParsed> {
    */
   _showType?: (needsParens: boolean) => string;
 
+  _mapInternal?: (fn: (t: Codec<any>) => Codec<any>, keys?: readonly string[]) => Codec<any>;
   /**
    * asMutable
    */
@@ -116,11 +117,11 @@ export interface InternalValidation<TParsed> {
   /**
    * Pick keys from an object
    */
-  _pick?: (keys: string[], pick: (t: Codec<any>, keys: string[]) => Codec<any>) => Codec<any>;
+  _pick?: (pick: (t: Codec<any>) => Codec<any>, keys: readonly string[]) => Codec<any>;
   /**
    * Omit keys from an object
    */
-  _omit?: (keys: string[], omit: (t: Codec<any>, keys: string[]) => Codec<any>) => Codec<any>;
+  _omit?: (omit: (t: Codec<any>) => Codec<any>, keys: readonly string[]) => Codec<any>;
 }
 
 /**

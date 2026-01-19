@@ -100,13 +100,13 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
       },
       _asMutable: () => InternalObject(fields, isPartial, false),
       _asReadonly: () => InternalObject(fields, isPartial, true),
-      _pick: keys =>
+      _pick: (_, keys) =>
         InternalObject(
           Object.fromEntries(Object.entries(fields).filter(([k]) => keys.includes(k))),
           isPartial,
           isReadonly,
         ),
-      _omit: keys =>
+      _omit: (_, keys) =>
         InternalObject(
           Object.fromEntries(Object.entries(fields).filter(([k]) => !keys.includes(k))),
           isPartial,
@@ -153,14 +153,15 @@ export function Partial<O extends RecordFields>(
 export function Partial(fields: any): ObjectCodec<any> {
   if (isRuntype(fields)) {
     const i = getInternal(fields);
-    if (!i._partial) {
-      throw new Error(
-        `Partial: input runtype "${fields.introspection.tag}" does not support 'partial' operation`,
-      );
+    const fn = i._partial ?? i._mapInternal;
+    if (fn) {
+      const result = fn(Partial);
+      // @ts-expect-error Unsafe cast from Codec to ObjectCodec
+      return result;
     }
-    const result = i._partial(Partial);
-    // @ts-expect-error Unsafe cast from Codec to ObjectCodec
-    return result;
+    throw new Error(
+      `Partial: input runtype "${fields.introspection.tag}" does not support 'partial' operation`,
+    );
   } else {
     return InternalObject(fields, true, false);
   }

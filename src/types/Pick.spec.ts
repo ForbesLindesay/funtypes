@@ -35,6 +35,20 @@ test('Pick(Named(Object))', () => {
   `);
 });
 
+export const MyBrandPickedType = ft.Pick(ft.Brand('MyName', ObjectType), ['a', 'c', 'z']);
+test('Pick(Brand(Object))', () => {
+  expect(ft.showType(MyBrandPickedType)).toMatchInlineSnapshot(`"{ a: number; c: boolean }"`);
+  expect(MyBrandPickedType.safeParse({ a: 42, c: true })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "a": 42,
+        "c": true,
+      },
+    }
+  `);
+});
+
 export const MyPickedIntersectionType = ft.Pick(
   ft.Intersect(
     ft.Object({
@@ -63,24 +77,60 @@ test('Pick(Intersect(Object, Partial))', () => {
   `);
 });
 
+export const MyPickedUnionType = ft.Pick(
+  ft.Union(
+    ft.Object({
+      a: ft.Number,
+      b: ft.String,
+      c: ft.Boolean,
+    }),
+    ft.Object({ z: ft.Number }),
+  ),
+  ['a', 'c', 'z'],
+);
+
+test('Pick(Union(Object, Partial))', () => {
+  expect(ft.showType(MyPickedUnionType)).toMatchInlineSnapshot(
+    `"{ a: number; c: boolean } | { z: number }"`,
+  );
+  const x: ft.Static<typeof MyPickedUnionType> = { a: 42, c: true };
+  expect(x).toEqual({ a: 42, c: true });
+  expect(MyPickedUnionType.safeParse({ a: 42, c: true })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "a": 42,
+        "c": true,
+      },
+    }
+  `);
+  expect(MyPickedUnionType.safeParse({ z: 42 })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "z": 42,
+      },
+    }
+  `);
+});
+
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Pick.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
-    export declare const MyPickedType: ft.Codec<Pick<{
+    export declare const MyPickedType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
         c: boolean;
     }, "a" | "c" | "z">>;
-    export declare const MyNamedPickedType: ft.Codec<Pick<{
+    export declare const MyNamedPickedType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
         c: boolean;
     }, "a" | "c" | "z">>;
-    export declare const MyPickedIntersectionType: ft.Codec<Pick<{
+    export declare const MyPickedIntersectionType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
         c: boolean;
-    } & {
         z?: number | undefined;
     }, "a" | "c" | "z">>;
     "

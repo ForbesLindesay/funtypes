@@ -75,7 +75,6 @@ test('Readonly(Tuple)', () => {
 
 export const array = ft.Array(ft.Number);
 export const readonlyArray = ft.Readonly(array);
-
 test('Readonly(Array)', () => {
   expect(readonlyArray.safeParse([10, 3])).toEqual({
     success: true,
@@ -89,10 +88,20 @@ export const intersectObjAndPartial = ft.Intersect(
   ft.Partial({ another: ft.String }),
 );
 export const readonlyIntersectObjAndPartial = ft.Readonly(intersectObjAndPartial);
-
 test('Readonly(Intersect(Object, Partial))', () => {
   expect(ft.showType(readonlyIntersectObjAndPartial)).toMatchInlineSnapshot(
     `"{ readonly whatever: number; readonly another?: string }"`,
+  );
+});
+
+export const unionObj = ft.Union(
+  ft.Object({ whatever: ft.Number }),
+  ft.Object({ another: ft.String }),
+);
+export const readonlyUnionObj = ft.Readonly(unionObj);
+test('Readonly(Union(Object, Object))', () => {
+  expect(ft.showType(readonlyUnionObj)).toMatchInlineSnapshot(
+    `"{ readonly whatever: number } | { readonly another: string }"`,
   );
 });
 
@@ -105,28 +114,37 @@ test('Exported types', () => {
     export declare const readonlyRecord: ft.Codec<{
         readonly [x: string]: number | undefined;
     }>;
-    export declare const obj: ft.Codec<{
+    export declare const obj: ft.ObjectCodec<{
         whatever: number;
     }>;
-    export declare const readonlyObject: ft.Codec<{
+    export declare const readonlyObject: ft.ObjectCodec<{
         readonly whatever: number;
     }>;
-    export declare const partialObj: ft.Codec<{
+    export declare const partialObj: ft.ObjectCodec<{
         whatever?: number | undefined;
     }>;
-    export declare const readonlyPartialObj: ft.Codec<{
+    export declare const readonlyPartialObj: ft.ObjectCodec<{
         readonly whatever?: number | undefined;
     }>;
     export declare const array: ft.Codec<number[]>;
     export declare const readonlyArray: ft.Codec<readonly number[]>;
-    export declare const intersectObjAndPartial: ft.Codec<{
+    export declare const intersectObjAndPartial: ft.ObjectCodec<{
         whatever: number;
-    } & {
         another?: string | undefined;
     }>;
-    export declare const readonlyIntersectObjAndPartial: ft.Codec<{
+    export declare const readonlyIntersectObjAndPartial: ft.ObjectCodec<{
         readonly whatever: number;
         readonly another?: string | undefined;
+    }>;
+    export declare const unionObj: ft.ObjectCodec<{
+        whatever: number;
+    } | {
+        another: string;
+    }>;
+    export declare const readonlyUnionObj: ft.ObjectCodec<{
+        readonly whatever: number;
+    } | {
+        readonly another: string;
     }>;
     "
   `);

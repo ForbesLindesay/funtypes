@@ -62,21 +62,20 @@ test('Omit(Intersect(Object, Partial))', () => {
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Omit.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
-    export declare const MyOmitedType: ft.Codec<Omit<{
+    export declare const MyOmitedType: ft.ObjectCodec<Omit<{
         a: number;
         b: string;
         c: boolean;
     }, "b">>;
-    export declare const MyNamedOmitedType: ft.Codec<Omit<{
+    export declare const MyNamedOmitedType: ft.ObjectCodec<Omit<{
         a: number;
         b: string;
         c: boolean;
     }, "b">>;
-    export declare const MyOmitedIntersectionType: ft.Codec<Omit<{
+    export declare const MyOmitedIntersectionType: ft.ObjectCodec<Omit<{
         a: number;
         b: string;
         c: boolean;
-    } & {
         z?: number | undefined;
     }, "b">>;
     "

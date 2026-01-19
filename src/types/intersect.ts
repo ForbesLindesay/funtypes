@@ -178,11 +178,7 @@ export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
         }
         return parenthesize(`${intersectees.map(v => showType(v, true)).join(' & ')}`, needsParens);
       },
-      _asMutable: asMutable => Intersect(...intersectees.map(asMutable)),
-      _asReadonly: asReadonly => Intersect(...intersectees.map(asReadonly)),
-      _partial: (asPartial) => Intersect(...intersectees.map(asPartial)),
-      _pick: (keys, pick) => Intersect(...intersectees.map(t => pick(t, keys))),
-      _omit: (keys, omit) => Intersect(...intersectees.map(t => omit(t, keys))),
+      _mapInternal: mapper => Intersect(...intersectees.map(mapper)),
     },
     {
       tag: 'intersect',
