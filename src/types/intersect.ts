@@ -26,7 +26,7 @@ export function Intersect<const TIntersectees extends readonly ObjectCodec<any>[
       ? (parameter: T) => any
       : unknown;
   }[number] extends (k: infer I) => void
-    ? {[K in keyof I]: I[K]}
+    ? { [K in keyof I]: I[K] }
     : never
 >;
 export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
@@ -93,7 +93,8 @@ export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
     t: lazyValue(() => allFieldInfoForMode(`t`)),
     s: lazyValue(() => allFieldInfoForMode(`s`)),
   };
-  const mapInternal = (mapper: (t: Codec<any>) => Codec<any>) => Intersect(...intersectees.map(mapper))
+  const mapInternal = (mapper: (t: Codec<any>) => Codec<any>) =>
+    Intersect(...intersectees.map(mapper));
   return create<
     // We use the fact that a union of functions is effectively an intersection of parameters
     // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}

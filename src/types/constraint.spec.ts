@@ -70,10 +70,111 @@ test('Constraint', () => {
   expect(ft.showType(NonEmptyString)).toMatchInlineSnapshot(`"MinLength<string, 1>"`);
 });
 
+export const NonEmptyStringV2 = ft.String.withConstraint(v => v.length >= 1, {
+  name: `NonEmptyString`,
+});
+test('withConstraint', () => {
+  expect(NonEmptyStringV2.safeParse('hello')).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": "hello",
+    }
+  `);
+  expect(NonEmptyStringV2.safeParse('')).toMatchInlineSnapshot(`
+    {
+      "fullError": [
+        "Unable to assign "" to NonEmptyString",
+        [
+          """ failed NonEmptyString check",
+        ],
+      ],
+      "message": """ failed NonEmptyString check",
+      "success": false,
+    }
+  `);
+  expect(NonEmptyStringV2.safeParse(42)).toMatchInlineSnapshot(`
+    {
+      "message": "Expected string, but was 42",
+      "success": false,
+    }
+  `);
+  expect(ft.showType(NonEmptyStringV2)).toMatchInlineSnapshot(`"NonEmptyString"`);
+});
+
+export const GuardedString = ft.Guard(x => typeof x === 'string');
+test('Guard', () => {
+  expect(GuardedString.safeParse('hello')).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": "hello",
+    }
+  `);
+  expect(GuardedString.safeParse(42)).toMatchInlineSnapshot(`
+    {
+      "fullError": [
+        "Unable to assign 42 to WithConstraint<unknown>",
+        [
+          "42 failed constraint check",
+        ],
+      ],
+      "message": "42 failed constraint check",
+      "success": false,
+    }
+  `);
+  expect(ft.showType(GuardedString)).toMatchInlineSnapshot(`"WithConstraint<unknown>"`);
+});
+
+export const GuardedStringV2 = ft.Union(ft.String, ft.Number).withGuard(x => typeof x === 'string');
+test('withGuard', () => {
+  expect(GuardedStringV2.safeParse('hello')).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": "hello",
+    }
+  `);
+  expect(GuardedStringV2.safeParse(true)).toMatchInlineSnapshot(`
+    {
+      "fullError": [
+        "Unable to assign true to string | number",
+        [
+          "Unable to assign true to string",
+          [
+            "Expected string, but was true",
+          ],
+        ],
+        [
+          "And unable to assign true to number",
+          [
+            "Expected number, but was true",
+          ],
+        ],
+      ],
+      "message": "Expected string | number, but was true",
+      "success": false,
+    }
+  `);
+  expect(GuardedStringV2.safeParse(42)).toMatchInlineSnapshot(`
+    {
+      "fullError": [
+        "Unable to assign 42 to WithConstraint<string | number>",
+        [
+          "42 failed constraint check",
+        ],
+      ],
+      "message": "42 failed constraint check",
+      "success": false,
+    }
+  `);
+  expect(ft.showType(GuardedStringV2)).toMatchInlineSnapshot(`"WithConstraint<string | number>"`);
+});
+
 test('Exported types', () => {
   expect(readFileSync(`lib/types/constraint.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
     export declare const NonEmptyString: ft.Codec<string>;
+    export declare const NonEmptyStringV2: ft.Codec<string>;
+    export declare const GuardedString: ft.Codec<string>;
+    export declare const GuardedStringV2: ft.Codec<string>;
     "
   `);
 });

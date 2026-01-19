@@ -85,6 +85,13 @@ test('Mutable(Intersect(Object, Partial))', () => {
   );
 });
 
+export const MutableNamed = ft.Mutable(
+  ft.Named('MyNamedType', ft.ReadonlyObject({ whatever: ft.Number })),
+);
+test('Mutable(Named(Object))', () => {
+  expect(ft.showType(MutableNamed)).toMatchInlineSnapshot(`"MyNamedType"`);
+});
+
 export const unionObj = ft.Union(
   ft.ReadonlyObject({ whatever: ft.Number }),
   ft.ReadonlyObject({ another: ft.String }),
@@ -93,6 +100,23 @@ export const mutableUnionObj = ft.Mutable(unionObj);
 test('Mutable(Union(Object, Object))', () => {
   expect(ft.showType(mutableUnionObj)).toMatchInlineSnapshot(
     `"{ whatever: number } | { another: string }"`,
+  );
+});
+
+export const MutableConstrainedObject = ft.Mutable(
+  ft.Constraint(ft.ReadonlyObject({ whatever: ft.Number }), x => x.whatever > 0, {
+    name: 'PositiveWhatever',
+  }),
+);
+
+test('Mutable(Constraint(Object))', () => {
+  expect(ft.showType(MutableConstrainedObject)).toMatchInlineSnapshot(`"PositiveWhatever"`);
+});
+
+test('Mutable(Union(Object, Null))', () => {
+  ft.Mutable(
+    // @ts-expect-error Types don't allow Mutable to be applied to non-object types
+    ft.Union(ft.ReadonlyObject({ whatever: ft.Number }), ft.Null),
   );
 });
 
@@ -123,6 +147,9 @@ test('Exported types', () => {
         whatever: number;
         another?: string | undefined;
     }>;
+    export declare const MutableNamed: ft.ObjectCodec<{
+        whatever: number;
+    }>;
     export declare const unionObj: ft.Codec<{
         readonly whatever: number;
     } | {
@@ -132,6 +159,9 @@ test('Exported types', () => {
         whatever: number;
     } | {
         another: string;
+    }>;
+    export declare const MutableConstrainedObject: ft.Codec<{
+        whatever: number;
     }>;
     "
   `);

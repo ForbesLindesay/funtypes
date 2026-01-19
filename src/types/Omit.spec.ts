@@ -59,6 +59,18 @@ test('Omit(Intersect(Object, Partial))', () => {
   `);
 });
 
+test('Omit<Intersect<NonObject>', () => {
+  expect(() => {
+    ft.Omit(
+      // @ts-expect-error Union only allows ObjectCodec inputs
+      ft.Intersect(ft.Object({ name: ft.String }), ft.Null),
+      ['name', 'rank'],
+    );
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Omit: input runtype "literal" does not support the 'omit' operation"`,
+  );
+});
+
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Omit.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';

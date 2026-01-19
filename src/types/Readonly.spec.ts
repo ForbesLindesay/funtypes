@@ -105,6 +105,30 @@ test('Readonly(Union(Object, Object))', () => {
   );
 });
 
+export const ReadonlyNamed = ft.Readonly(
+  ft.Named('MyNamedType', ft.Object({ whatever: ft.Number })),
+);
+test('Readonly(Named(Object))', () => {
+  expect(ft.showType(ReadonlyNamed)).toMatchInlineSnapshot(`"MyNamedType"`);
+});
+
+export const ReadonlyConstrainedObject = ft.Readonly(
+  ft.Constraint(ft.Object({ whatever: ft.Number }), x => x.whatever > 0, {
+    name: 'PositiveWhatever',
+  }),
+);
+
+test('Readonly(Constraint(Object))', () => {
+  expect(ft.showType(ReadonlyConstrainedObject)).toMatchInlineSnapshot(`"PositiveWhatever"`);
+});
+
+test('Readonly(Union(Object, Null))', () => {
+  ft.Readonly(
+    // @ts-expect-error Types don't allow Readonly to be applied to non-object types
+    ft.Union(ft.ReadonlyObject({ whatever: ft.Number }), ft.Null),
+  );
+});
+
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Readonly.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
@@ -145,6 +169,12 @@ test('Exported types', () => {
         readonly whatever: number;
     } | {
         readonly another: string;
+    }>;
+    export declare const ReadonlyNamed: ft.ObjectCodec<{
+        readonly whatever: number;
+    }>;
+    export declare const ReadonlyConstrainedObject: ft.Codec<{
+        readonly whatever: number;
     }>;
     "
   `);

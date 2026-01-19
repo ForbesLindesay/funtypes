@@ -12,5 +12,6 @@ export function Readonly<TObject extends { [key: string]: unknown }>(
 export function Readonly(input: Codec<any>): Codec<any> {
   assertRuntype(input);
   const internal = getInternal(input);
-  return internal._asReadonly ? internal._asReadonly(Readonly) : input;
+  if (!internal._asReadonly) return input; // Since this only affects the printed type, we can just return the input unchanged if it doesn't support asReadonly
+  return internal._asReadonly(Readonly);
 }

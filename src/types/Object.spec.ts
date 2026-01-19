@@ -92,6 +92,11 @@ test('Partial<Intersect<NonObject>', () => {
   );
 });
 
+export const PartialNamed = ft.Partial(ft.Named('MyNamedType', ft.Object({ whatever: ft.Number })));
+test('Partial(Named(Object))', () => {
+  expect(ft.showType(PartialNamed)).toMatchInlineSnapshot(`"Partial<MyNamedType>"`);
+});
+
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Object.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
@@ -114,6 +119,9 @@ test('Exported types', () => {
         name?: string | undefined;
         rank?: string | undefined;
         home?: string | undefined;
+    }>;
+    export declare const PartialNamed: ft.ObjectCodec<{
+        whatever?: number | undefined;
     }>;
     "
   `);

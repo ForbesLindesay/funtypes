@@ -78,7 +78,7 @@ test('Partial<Union>', () => {
     `"Pick: input runtype "union" does not support the 'pick' operation"`,
   );
 });
-test('Partial<Intersect<NonObject>', () => {
+test('Pick<Intersect<NonObject>', () => {
   expect(() => {
     ft.Pick(
       // @ts-expect-error Union only allows ObjectCodec inputs

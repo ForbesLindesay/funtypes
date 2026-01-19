@@ -209,6 +209,33 @@ test('UnionRecord - mixed', () => {
   `);
 });
 
+export const ParsedStringsRecord = ft.Record(
+  ft.String.withParser({
+    parse: x => {
+      return { success: true, value: x.toLowerCase() };
+    },
+  }),
+  recordType,
+);
+test('Parsed Strings Record', () => {
+  expect(ft.showType(ParsedStringsRecord)).toMatchInlineSnapshot(
+    `"Record<ParsedValue<string>, { value: 42 }>"`,
+  );
+  expect(ParsedStringsRecord.safeParse({ FOO: record, Bar: record })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "bar": {
+          "value": 42,
+        },
+        "foo": {
+          "value": 42,
+        },
+      },
+    }
+  `);
+});
+
 export const BrandedStringsRecord = ft.Record(ft.Brand('MyBrand', ft.String), recordType);
 test('Branded Strings Record - strings', () => {
   expect(BrandedStringsRecord.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
@@ -270,6 +297,11 @@ test('Exported types', () => {
             value: 42;
         } | undefined;
         foo?: {
+            value: 42;
+        } | undefined;
+    }>;
+    export declare const ParsedStringsRecord: ft.Codec<{
+        [x: string]: {
             value: 42;
         } | undefined;
     }>;

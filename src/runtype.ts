@@ -305,10 +305,6 @@ export function create<T>(
   }
 }
 
-export function getShow(v: Runtype) {
-  return v[internal]._showType;
-}
-
 export interface Cycle<T> {
   success: true;
   cycle: true;
