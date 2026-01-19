@@ -162,7 +162,7 @@ export interface Runtype<TParsed = unknown> {
    */
   safeParse(x: any): Result<TParsed>;
 
-  [internal]: InternalValidation<TParsed>;
+  readonly [internal]: InternalValidation<TParsed>;
 }
 
 export interface Codec<TParsed> extends Runtype<TParsed> {
@@ -231,7 +231,7 @@ export interface Codec<TParsed> extends Runtype<TParsed> {
   withParser<T>(value: ParsedValueConfig<TParsed, T>): Codec<T>;
 }
 export interface ObjectCodec<TParsed> extends Codec<TParsed> {
-  [internal]: InternalValidation<TParsed> & { readonly __object__: true | undefined };
+  readonly CodecType: 'ObjectCodec' | undefined;
 }
 /**
  * Obtains the static type associated with a Runtype.
