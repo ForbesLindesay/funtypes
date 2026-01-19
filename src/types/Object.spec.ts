@@ -65,13 +65,32 @@ test('Partial<Intersect>', () => {
     },
   });
 });
-export const PartialFromUnion = ft.Partial(
-  ft.Union(
-    ft.Object({ name: ft.String }),
-    ft.Object({ rank: ft.String }),
-    ft.Object({ home: ft.String }),
-  ),
-);
+
+test('Partial<Union>', () => {
+  expect(() => {
+    ft.Partial(
+      // @ts-expect-error Union only allows ObjectCodec inputs
+      ft.Union(
+        ft.Object({ name: ft.String }),
+        ft.Object({ rank: ft.String }),
+        ft.Object({ home: ft.String }),
+      ),
+    );
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Partial: input runtype "union" does not support 'partial' operation"`,
+  );
+});
+
+test('Partial<Intersect<NonObject>', () => {
+  expect(() => {
+    ft.Partial(
+      // @ts-expect-error Union only allows ObjectCodec inputs
+      ft.Intersect(ft.Object({ name: ft.String }), ft.Null),
+    );
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Partial: input runtype "literal" does not support 'partial' operation"`,
+  );
+});
 
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Object.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
@@ -94,13 +113,6 @@ test('Exported types', () => {
     export declare const PartialCrewMemberFromIntersect: ft.ObjectCodec<{
         name?: string | undefined;
         rank?: string | undefined;
-        home?: string | undefined;
-    }>;
-    export declare const PartialFromUnion: ft.ObjectCodec<{
-        name?: string | undefined;
-    } | {
-        rank?: string | undefined;
-    } | {
         home?: string | undefined;
     }>;
     "

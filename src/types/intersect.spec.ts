@@ -161,13 +161,13 @@ test('Exported types', () => {
     export declare const IntersectStringAndBrand: ft.Codec<string & {
         readonly __type__: "my_brand";
     }>;
-    export declare const IntersectUnions: ft.ObjectCodec<{
+    export declare const IntersectUnions: ft.Codec<({
         a: number;
-        c: boolean;
-        d: boolean;
     } | {
         b: string;
+    }) & {
         c: boolean;
+    } & {
         d: boolean;
     }>;
     "

@@ -12,6 +12,5 @@ export function Mutable<TObject extends { readonly [key: string]: unknown }>(
 export function Mutable(input: any): any {
   assertRuntype(input);
   const internal = getInternal(input);
-  const fn = internal._mapInternal ?? internal._asMutable;
-  return fn ? fn(Mutable) : input;
+  return internal._asMutable ? internal._asMutable(Mutable) : input;
 }

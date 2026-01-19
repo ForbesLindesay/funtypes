@@ -93,6 +93,7 @@ export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
     t: lazyValue(() => allFieldInfoForMode(`t`)),
     s: lazyValue(() => allFieldInfoForMode(`s`)),
   };
+  const mapInternal = (mapper: (t: Codec<any>) => Codec<any>) => Intersect(...intersectees.map(mapper))
   return create<
     // We use the fact that a union of functions is effectively an intersection of parameters
     // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
@@ -178,7 +179,11 @@ export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
         }
         return parenthesize(`${intersectees.map(v => showType(v, true)).join(' & ')}`, needsParens);
       },
-      _mapInternal: mapper => Intersect(...intersectees.map(mapper)),
+      _asMutable: mapInternal,
+      _asReadonly: mapInternal,
+      _partial: mapInternal,
+      _pick: mapInternal,
+      _omit: mapInternal,
     },
     {
       tag: 'intersect',

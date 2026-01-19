@@ -19,7 +19,8 @@ export function Named<TUnderlying>(
         innerValidateToPlaceholder(underlying, value),
       _underlyingType: () => underlying,
       _showType: () => name,
-      _mapInternal: mapper => Named(name, mapper(underlying)),
+      _asMutable: mapper => Named(name, mapper(underlying)),
+      _asReadonly: mapper => Named(name, mapper(underlying)),
       _partial: asPartial => Named(`Partial<${name}>`, asPartial(underlying)),
       _pick: (pick, keys) =>
         Named(`Pick<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, pick(underlying)),

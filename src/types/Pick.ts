@@ -6,14 +6,13 @@ export function Pick<
 >(input: ObjectCodec<TObject>, keys: TKeys): ObjectCodec<Pick<TObject, TKeys[number]>> {
   assertRuntype(input);
   const internal = getInternal(input);
-  const fn = internal._pick ?? internal._mapInternal;
-  if (!fn) {
+  if (!internal._pick) {
     throw new Error(
       `Pick: input runtype "${input.introspection.tag}" does not support the 'pick' operation`,
     );
   }
 
-  const result = fn(
+  const result = internal._pick(
     t =>
       // @ts-expect-error Pick only allows ObjectCodec inputs
       Pick(t, keys),

@@ -12,6 +12,5 @@ export function Readonly<TObject extends { [key: string]: unknown }>(
 export function Readonly(input: Codec<any>): Codec<any> {
   assertRuntype(input);
   const internal = getInternal(input);
-  const fn = internal._mapInternal ?? internal._asReadonly;
-  return fn ? fn(Readonly) : input;
+  return internal._asReadonly ? internal._asReadonly(Readonly) : input;
 }

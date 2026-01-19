@@ -153,9 +153,8 @@ export function Partial<O extends RecordFields>(
 export function Partial(fields: any): ObjectCodec<any> {
   if (isRuntype(fields)) {
     const i = getInternal(fields);
-    const fn = i._partial ?? i._mapInternal;
-    if (fn) {
-      const result = fn(Partial);
+    if (i._partial) {
+      const result = i._partial(Partial);
       // @ts-expect-error Unsafe cast from Codec to ObjectCodec
       return result;
     }

@@ -101,7 +101,6 @@ export interface InternalValidation<TParsed> {
    */
   _showType?: (needsParens: boolean) => string;
 
-  _mapInternal?: (fn: (t: Codec<any>) => Codec<any>, keys?: readonly string[]) => Codec<any>;
   /**
    * asMutable
    */
@@ -232,7 +231,7 @@ export interface Codec<TParsed> extends Runtype<TParsed> {
   withParser<T>(value: ParsedValueConfig<TParsed, T>): Codec<T>;
 }
 export interface ObjectCodec<TParsed> extends Codec<TParsed> {
-  o: true;
+  [internal]: InternalValidation<TParsed> & { readonly __object__: true | undefined };
 }
 /**
  * Obtains the static type associated with a Runtype.

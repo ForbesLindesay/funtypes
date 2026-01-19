@@ -123,12 +123,12 @@ test('Exported types', () => {
         whatever: number;
         another?: string | undefined;
     }>;
-    export declare const unionObj: ft.ObjectCodec<{
+    export declare const unionObj: ft.Codec<{
         readonly whatever: number;
     } | {
         readonly another: string;
     }>;
-    export declare const mutableUnionObj: ft.ObjectCodec<{
+    export declare const mutableUnionObj: ft.Codec<{
         whatever: number;
     } | {
         another: string;

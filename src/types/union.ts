@@ -9,7 +9,6 @@ import {
   showType,
   parenthesize,
   showValue,
-  ObjectCodec,
 } from '../runtype';
 import { LiteralValue, Null } from './literal';
 import { lazyValue } from './lazy';
@@ -153,20 +152,6 @@ function findDiscriminator<TResult>(
 /**
  * Construct a union runtype from runtypes for its alternatives.
  */
-export function Union<const TAlternatives extends readonly ObjectCodec<any>[]>(
-  ...alternatives: TAlternatives
-): ObjectCodec<
-  {
-    [key in keyof TAlternatives]: TAlternatives[key] extends Runtype<infer T> ? T : unknown;
-  }[number]
->;
-export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
-  ...alternatives: TAlternatives
-): Codec<
-  {
-    [key in keyof TAlternatives]: TAlternatives[key] extends Runtype<infer T> ? T : unknown;
-  }[number]
->;
 export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
   ...alternatives: TAlternatives
 ): Codec<
@@ -363,7 +348,8 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
           needsParens,
         );
       },
-      _mapInternal: mapper => Union(...flatAlternatives.map(mapper)),
+      _asMutable: mapper => Union(...flatAlternatives.map(mapper)),
+      _asReadonly: mapper => Union(...flatAlternatives.map(mapper)),
     },
     {
       tag: 'union',

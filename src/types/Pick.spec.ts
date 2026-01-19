@@ -35,20 +35,6 @@ test('Pick(Named(Object))', () => {
   `);
 });
 
-export const MyBrandPickedType = ft.Pick(ft.Brand('MyName', ObjectType), ['a', 'c', 'z']);
-test('Pick(Brand(Object))', () => {
-  expect(ft.showType(MyBrandPickedType)).toMatchInlineSnapshot(`"{ a: number; c: boolean }"`);
-  expect(MyBrandPickedType.safeParse({ a: 42, c: true })).toMatchInlineSnapshot(`
-    {
-      "success": true,
-      "value": {
-        "a": 42,
-        "c": true,
-      },
-    }
-  `);
-});
-
 export const MyPickedIntersectionType = ft.Pick(
   ft.Intersect(
     ft.Object({
@@ -77,41 +63,31 @@ test('Pick(Intersect(Object, Partial))', () => {
   `);
 });
 
-export const MyPickedUnionType = ft.Pick(
-  ft.Union(
-    ft.Object({
-      a: ft.Number,
-      b: ft.String,
-      c: ft.Boolean,
-    }),
-    ft.Object({ z: ft.Number }),
-  ),
-  ['a', 'c', 'z'],
-);
-
-test('Pick(Union(Object, Partial))', () => {
-  expect(ft.showType(MyPickedUnionType)).toMatchInlineSnapshot(
-    `"{ a: number; c: boolean } | { z: number }"`,
+test('Partial<Union>', () => {
+  expect(() => {
+    ft.Pick(
+      // @ts-expect-error Union only allows ObjectCodec inputs
+      ft.Union(
+        ft.Object({ name: ft.String }),
+        ft.Object({ rank: ft.String }),
+        ft.Object({ home: ft.String }),
+      ),
+      ['name', 'rank'],
+    );
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Pick: input runtype "union" does not support the 'pick' operation"`,
   );
-  const x: ft.Static<typeof MyPickedUnionType> = { a: 42, c: true };
-  expect(x).toEqual({ a: 42, c: true });
-  expect(MyPickedUnionType.safeParse({ a: 42, c: true })).toMatchInlineSnapshot(`
-    {
-      "success": true,
-      "value": {
-        "a": 42,
-        "c": true,
-      },
-    }
-  `);
-  expect(MyPickedUnionType.safeParse({ z: 42 })).toMatchInlineSnapshot(`
-    {
-      "success": true,
-      "value": {
-        "z": 42,
-      },
-    }
-  `);
+});
+test('Partial<Intersect<NonObject>', () => {
+  expect(() => {
+    ft.Pick(
+      // @ts-expect-error Union only allows ObjectCodec inputs
+      ft.Intersect(ft.Object({ name: ft.String }), ft.Null),
+      ['name', 'rank'],
+    );
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Pick: input runtype "literal" does not support the 'pick' operation"`,
+  );
 });
 
 test('Exported types', () => {
