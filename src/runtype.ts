@@ -109,15 +109,18 @@ export interface InternalValidation<TParsed> {
    * asReadonly
    */
   _asReadonly?: (asReadonly: (t: Codec<any>) => Codec<any>) => Codec<any>;
-
+  /**
+   * Make all properties optional
+   */
+  _partial?: (asPartial: (t: Codec<any>) => Codec<any>) => Codec<any>;
   /**
    * Pick keys from an object
    */
-  _pick?: (keys: string[], pick: (t: Codec<any>, keys: string[]) => Codec<any>) => Codec<any>;
+  _pick?: (pick: (t: Codec<any>) => Codec<any>, keys: readonly string[]) => Codec<any>;
   /**
    * Omit keys from an object
    */
-  _omit?: (keys: string[], omit: (t: Codec<any>, keys: string[]) => Codec<any>) => Codec<any>;
+  _omit?: (omit: (t: Codec<any>) => Codec<any>, keys: readonly string[]) => Codec<any>;
 }
 
 /**
@@ -227,6 +230,9 @@ export interface Codec<TParsed> extends Runtype<TParsed> {
    */
   withParser<T>(value: ParsedValueConfig<TParsed, T>): Codec<T>;
 }
+export interface ObjectCodec<TParsed> extends Codec<TParsed> {
+  [internal]: InternalValidation<TParsed> & { readonly __object__: true | undefined };
+}
 /**
  * Obtains the static type associated with a Runtype.
  */
@@ -297,10 +303,6 @@ export function create<T>(
     const validated = innerGuard(A, x, createGuardVisitedState(), false, false);
     return validated === undefined;
   }
-}
-
-export function getShow(v: Runtype) {
-  return v[internal]._showType;
 }
 
 export interface Cycle<T> {

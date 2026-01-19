@@ -7,6 +7,8 @@ import {
   assertRuntype,
   showType,
   isRuntype,
+  ObjectCodec,
+  getInternal,
 } from '../runtype';
 import { hasKey } from '../util';
 import { Failure } from '..';
@@ -21,7 +23,7 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
   fields: O,
   isPartial: Part,
   isReadonly: RO,
-): Codec<any> {
+): ObjectCodec<any> {
   assertRuntype(...Object.values(fields));
   const fieldNames: ReadonlySet<string> = new Set(Object.keys(fields));
   const runtype: Codec<any> = create<any>(
@@ -98,20 +100,19 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
       },
       _asMutable: () => InternalObject(fields, isPartial, false),
       _asReadonly: () => InternalObject(fields, isPartial, true),
-      _pick: keys => {
-        return InternalObject(
+      _pick: (_, keys) =>
+        InternalObject(
           Object.fromEntries(Object.entries(fields).filter(([k]) => keys.includes(k))),
           isPartial,
           isReadonly,
-        );
-      },
-      _omit: keys => {
-        return InternalObject(
+        ),
+      _omit: (_, keys) =>
+        InternalObject(
           Object.fromEntries(Object.entries(fields).filter(([k]) => !keys.includes(k))),
           isPartial,
           isReadonly,
-        );
-      },
+        ),
+      _partial: () => InternalObject(fields, true, isReadonly),
     },
     {
       tag: 'object',
@@ -120,12 +121,12 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
       fields,
     },
   );
-  return runtype;
+  return runtype as ObjectCodec<any>;
 }
 
 function Obj<O extends RecordFields>(
   fields: O,
-): Codec<{
+): ObjectCodec<{
   -readonly [K in keyof O]: Static<O[K]>;
 }> {
   return InternalObject(fields, false, false);
@@ -133,29 +134,33 @@ function Obj<O extends RecordFields>(
 export { Obj as Object };
 export function ReadonlyObject<O extends RecordFields>(
   fields: O,
-): Codec<{
+): ObjectCodec<{
   readonly [K in keyof O]: Static<O[K]>;
 }> {
   return InternalObject(fields, false, true);
 }
 
 export function Partial<O extends { [_: string]: unknown }>(
-  fields: Codec<O>,
-): Codec<{
+  fields: ObjectCodec<O>,
+): ObjectCodec<{
   [K in keyof O]?: O[K];
 }>;
 export function Partial<O extends RecordFields>(
   fields: O,
-): Codec<{
+): ObjectCodec<{
   -readonly [K in keyof O]?: Static<O[K]>;
 }>;
-export function Partial(fields: any): Codec<any> {
+export function Partial(fields: any): ObjectCodec<any> {
   if (isRuntype(fields)) {
-    if (fields.introspection.tag !== 'object') {
-      // TODO
-      throw new Error(`Partial can only be applied to Object runtype at the moment`);
+    const i = getInternal(fields);
+    if (i._partial) {
+      const result = i._partial(Partial);
+      // @ts-expect-error Unsafe cast from Codec to ObjectCodec
+      return result;
     }
-    return InternalObject(fields.introspection.fields, true, fields.introspection.isReadonly);
+    throw new Error(
+      `Partial: input runtype "${fields.introspection.tag}" does not support 'partial' operation`,
+    );
   } else {
     return InternalObject(fields, true, false);
   }
@@ -163,7 +168,7 @@ export function Partial(fields: any): Codec<any> {
 
 export function ReadonlyPartial<O extends RecordFields>(
   fields: O,
-): Codec<{
+): ObjectCodec<{
   readonly [K in keyof O]?: Static<O[K]>;
 }> {
   return InternalObject(fields, true, true);

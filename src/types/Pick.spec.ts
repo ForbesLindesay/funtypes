@@ -63,24 +63,50 @@ test('Pick(Intersect(Object, Partial))', () => {
   `);
 });
 
+test('Partial<Union>', () => {
+  expect(() => {
+    ft.Pick(
+      // @ts-expect-error Union only allows ObjectCodec inputs
+      ft.Union(
+        ft.Object({ name: ft.String }),
+        ft.Object({ rank: ft.String }),
+        ft.Object({ home: ft.String }),
+      ),
+      ['name', 'rank'],
+    );
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Pick: input runtype "union" does not support the 'pick' operation"`,
+  );
+});
+test('Pick<Intersect<NonObject>', () => {
+  expect(() => {
+    ft.Pick(
+      // @ts-expect-error Union only allows ObjectCodec inputs
+      ft.Intersect(ft.Object({ name: ft.String }), ft.Null),
+      ['name', 'rank'],
+    );
+  }).toThrowErrorMatchingInlineSnapshot(
+    `"Pick: input runtype "literal" does not support the 'pick' operation"`,
+  );
+});
+
 test('Exported types', () => {
   expect(readFileSync(`lib/types/Pick.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
-    export declare const MyPickedType: ft.Codec<Pick<{
+    export declare const MyPickedType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
         c: boolean;
     }, "a" | "c" | "z">>;
-    export declare const MyNamedPickedType: ft.Codec<Pick<{
+    export declare const MyNamedPickedType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
         c: boolean;
     }, "a" | "c" | "z">>;
-    export declare const MyPickedIntersectionType: ft.Codec<Pick<{
+    export declare const MyPickedIntersectionType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
         c: boolean;
-    } & {
         z?: number | undefined;
     }, "a" | "c" | "z">>;
     "

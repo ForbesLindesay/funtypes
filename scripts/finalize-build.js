@@ -112,6 +112,7 @@ const replacements = {
   _asReadonly: 'r',
   _pick: 'y',
   _omit: 'x',
+  _partial: 'z',
 };
 readdirSync(`lib`).forEach(f => {
   if (!ALLOWED_FILES.has(f)) {

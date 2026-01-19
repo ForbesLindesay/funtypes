@@ -164,7 +164,7 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
   }[number];
   assertRuntype(...alternatives);
   type InnerValidate = (x: any, innerValidate: InnerValidateHelper) => Result<TResult>;
-  const flatAlternatives: Runtype<TResult>[] = [];
+  const flatAlternatives: Codec<TResult>[] = [];
   for (const a of alternatives) {
     if (a.introspection.tag === 'union') {
       flatAlternatives.push(...(a.introspection.alternatives as any));
@@ -348,6 +348,8 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
           needsParens,
         );
       },
+      _asMutable: mapper => Union(...flatAlternatives.map(mapper)),
+      _asReadonly: mapper => Union(...flatAlternatives.map(mapper)),
     },
     {
       tag: 'union',

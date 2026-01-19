@@ -1,15 +1,13 @@
-import * as ta from 'type-assertions';
-import { Record, String, Number, Literal, Union, Object as ObjectType, Constraint } from '..';
+import { readFileSync } from 'fs';
+import * as ft from '..';
 
-const recordType = ObjectType({ value: Literal(42) });
+const recordType = ft.Object({ value: ft.Literal(42) });
 const record = { value: 42 };
 
+export const StringRecord = ft.Record(ft.String, recordType);
 test('StringRecord', () => {
-  const dictionary = Record(String, recordType);
-  ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in string]?: { value: 42 } }>
-  >();
-  expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
+  expect(ft.showType(StringRecord)).toMatchInlineSnapshot(`"Record<string, { value: 42 }>"`);
+  expect(StringRecord.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": {
@@ -22,7 +20,7 @@ test('StringRecord', () => {
       },
     }
   `);
-  expect(dictionary.safeParse({ foo: record, bar: { value: 24 } })).toMatchInlineSnapshot(`
+  expect(StringRecord.safeParse({ foo: record, bar: { value: 24 } })).toMatchInlineSnapshot(`
     {
       "fullError": [
         "The types of bar are not compatible",
@@ -43,12 +41,10 @@ test('StringRecord', () => {
   `);
 });
 
+const NumberRecord = ft.Record(ft.Number, recordType);
 test('NumberRecord', () => {
-  const dictionary = Record(Number, recordType);
-  ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in number]?: { value: 42 } }>
-  >();
-  expect(dictionary.safeParse({ 4: record, 3.14: record })).toMatchInlineSnapshot(`
+  expect(ft.showType(NumberRecord)).toMatchInlineSnapshot(`"Record<number, { value: 42 }>"`);
+  expect(NumberRecord.safeParse({ 4: record, 3.14: record })).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": {
@@ -61,7 +57,7 @@ test('NumberRecord', () => {
       },
     }
   `);
-  expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
+  expect(NumberRecord.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
     {
       "message": "Expected record key to be a number, but was "foo"",
       "success": false,
@@ -70,16 +66,12 @@ test('NumberRecord', () => {
 });
 
 test('Using Object.create', () => {
-  const dictionary = Record(String, recordType);
-  ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in string]?: { value: 42 } }>
-  >();
   const record = Object.create(null);
   record.value = 42;
   const outer = Object.create(null);
   outer.foo = record;
   outer.bar = record;
-  expect(dictionary.safeParse(outer)).toMatchInlineSnapshot(`
+  expect(StringRecord.safeParse(outer)).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": {
@@ -95,7 +87,7 @@ test('Using Object.create', () => {
   const outer2 = Object.create(null);
   outer2.foo = record;
   outer2.bar = { value: 24 };
-  expect(dictionary.safeParse(outer2)).toMatchInlineSnapshot(`
+  expect(StringRecord.safeParse(outer2)).toMatchInlineSnapshot(`
     {
       "fullError": [
         "The types of bar are not compatible",
@@ -116,15 +108,13 @@ test('Using Object.create', () => {
   `);
 });
 
+export const IntegerRecord = ft.Record(
+  ft.Constraint(ft.Number, v => v === Math.floor(v), { name: 'Integer' }),
+  recordType,
+);
 test('IntegerRecord', () => {
-  const dictionary = Record(
-    Constraint(Number, v => v === Math.floor(v), { name: 'Integer' }),
-    recordType,
-  );
-  ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in number]?: { value: 42 } }>
-  >();
-  expect(dictionary.safeParse({ 4: record, 2: record })).toMatchInlineSnapshot(`
+  expect(ft.showType(IntegerRecord)).toMatchInlineSnapshot(`"Record<Integer, { value: 42 }>"`);
+  expect(IntegerRecord.safeParse({ 4: record, 2: record })).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": {
@@ -137,7 +127,7 @@ test('IntegerRecord', () => {
       },
     }
   `);
-  expect(dictionary.safeParse({ 4: record, 3.14: record })).toMatchInlineSnapshot(`
+  expect(IntegerRecord.safeParse({ 4: record, 3.14: record })).toMatchInlineSnapshot(`
     {
       "message": "Expected record key to be Integer, but was "3.14"",
       "success": false,
@@ -145,12 +135,10 @@ test('IntegerRecord', () => {
   `);
 });
 
+export const UnionRecord = ft.Record(ft.Union(ft.Literal('foo'), ft.Literal('bar')), recordType);
 test('UnionRecord - strings', () => {
-  const dictionary = Record(Union(Literal('foo'), Literal('bar')), recordType);
-  ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in 'foo' | 'bar']?: { value: 42 } }>
-  >();
-  expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
+  expect(ft.showType(UnionRecord)).toMatchInlineSnapshot(`"Record<"foo" | "bar", { value: 42 }>"`);
+  expect(UnionRecord.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": {
@@ -163,19 +151,18 @@ test('UnionRecord - strings', () => {
       },
     }
   `);
-  expect(dictionary.safeParse({ 10: record })).toMatchInlineSnapshot(`
+  expect(UnionRecord.safeParse({ 10: record })).toMatchInlineSnapshot(`
     {
       "message": "Expected record key to be "foo" | "bar", but was "10"",
       "success": false,
     }
   `);
 });
+
+export const UnionNumbersRecord = ft.Record(ft.Union(ft.Literal(24), ft.Literal(42)), recordType);
 test('UnionRecord - numbers', () => {
-  const dictionary = Record(Union(Literal(24), Literal(42)), recordType);
-  ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in 24 | 42]?: { value: 42 } }>
-  >();
-  expect(dictionary.safeParse({ 24: record, 42: record })).toMatchInlineSnapshot(`
+  expect(ft.showType(UnionNumbersRecord)).toMatchInlineSnapshot(`"Record<24 | 42, { value: 42 }>"`);
+  expect(UnionNumbersRecord.safeParse({ 24: record, 42: record })).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": {
@@ -188,19 +175,20 @@ test('UnionRecord - numbers', () => {
       },
     }
   `);
-  expect(dictionary.safeParse({ 10: record })).toMatchInlineSnapshot(`
+  expect(UnionNumbersRecord.safeParse({ 10: record })).toMatchInlineSnapshot(`
     {
       "message": "Expected record key to be 24 | 42, but was "10"",
       "success": false,
     }
   `);
 });
+
+export const UnionMixedRecord = ft.Record(ft.Union(ft.Literal('foo'), ft.Literal(42)), recordType);
 test('UnionRecord - mixed', () => {
-  const dictionary = Record(Union(Literal('foo'), Literal(42)), recordType);
-  ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in 'foo' | 42]?: { value: 42 } }>
-  >();
-  expect(dictionary.safeParse({ foo: record, 42: record })).toMatchInlineSnapshot(`
+  expect(ft.showType(UnionMixedRecord)).toMatchInlineSnapshot(
+    `"Record<"foo" | 42, { value: 42 }>"`,
+  );
+  expect(UnionMixedRecord.safeParse({ foo: record, 42: record })).toMatchInlineSnapshot(`
     {
       "success": true,
       "value": {
@@ -213,10 +201,117 @@ test('UnionRecord - mixed', () => {
       },
     }
   `);
-  expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
+  expect(UnionMixedRecord.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
     {
       "message": "Expected record key to be "foo" | 42, but was "bar"",
       "success": false,
     }
+  `);
+});
+
+export const ParsedStringsRecord = ft.Record(
+  ft.String.withParser({
+    parse: x => {
+      return { success: true, value: x.toLowerCase() };
+    },
+  }),
+  recordType,
+);
+test('Parsed Strings Record', () => {
+  expect(ft.showType(ParsedStringsRecord)).toMatchInlineSnapshot(
+    `"Record<ParsedValue<string>, { value: 42 }>"`,
+  );
+  expect(ParsedStringsRecord.safeParse({ FOO: record, Bar: record })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "bar": {
+          "value": 42,
+        },
+        "foo": {
+          "value": 42,
+        },
+      },
+    }
+  `);
+});
+
+export const BrandedStringsRecord = ft.Record(ft.Brand('MyBrand', ft.String), recordType);
+test('Branded Strings Record - strings', () => {
+  expect(BrandedStringsRecord.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "bar": {
+          "value": 42,
+        },
+        "foo": {
+          "value": 42,
+        },
+      },
+    }
+  `);
+  expect(BrandedStringsRecord.safeParse({ 10: record })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "10": {
+          "value": 42,
+        },
+      },
+    }
+  `);
+});
+
+test('Exported types', () => {
+  expect(readFileSync(`lib/types/Record.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
+    "import * as ft from '..';
+    export declare const StringRecord: ft.Codec<{
+        [x: string]: {
+            value: 42;
+        } | undefined;
+    }>;
+    export declare const IntegerRecord: ft.Codec<{
+        [x: number]: {
+            value: 42;
+        } | undefined;
+    }>;
+    export declare const UnionRecord: ft.Codec<{
+        foo?: {
+            value: 42;
+        } | undefined;
+        bar?: {
+            value: 42;
+        } | undefined;
+    }>;
+    export declare const UnionNumbersRecord: ft.Codec<{
+        42?: {
+            value: 42;
+        } | undefined;
+        24?: {
+            value: 42;
+        } | undefined;
+    }>;
+    export declare const UnionMixedRecord: ft.Codec<{
+        42?: {
+            value: 42;
+        } | undefined;
+        foo?: {
+            value: 42;
+        } | undefined;
+    }>;
+    export declare const ParsedStringsRecord: ft.Codec<{
+        [x: string]: {
+            value: 42;
+        } | undefined;
+    }>;
+    export declare const BrandedStringsRecord: ft.Codec<{
+        [x: string & {
+                readonly __type__: "MyBrand";
+            }]: {
+            value: 42;
+        } | undefined;
+    }>;
+    "
   `);
 });

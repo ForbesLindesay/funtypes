@@ -3,7 +3,7 @@ import { Constraint } from './types/constraint';
 import { ParsedValue } from './types/ParsedValue';
 
 export { assertType } from './assertType';
-export type { Runtype, Codec, Static } from './runtype';
+export type { Runtype, Codec, ObjectCodec, Static } from './runtype';
 export type { Success, Failure, Result } from './result';
 export { showError } from './result';
 export { ValidationError } from './errors';

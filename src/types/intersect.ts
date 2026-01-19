@@ -9,12 +9,39 @@ import {
   parenthesize,
   showType,
   Codec,
+  ObjectCodec,
 } from '../runtype';
 import { lazyValue } from './lazy';
 
 /**
  * Construct an intersection runtype from runtypes for its alternatives.
  */
+export function Intersect<const TIntersectees extends readonly ObjectCodec<any>[]>(
+  ...intersectees: TIntersectees
+): ObjectCodec<
+  // We use the fact that a union of functions is effectively an intersection of parameters
+  // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
+  {
+    [key in keyof TIntersectees]: TIntersectees[key] extends Runtype<infer T>
+      ? (parameter: T) => any
+      : unknown;
+  }[number] extends (k: infer I) => void
+    ? { [K in keyof I]: I[K] }
+    : never
+>;
+export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
+  ...intersectees: TIntersectees
+): Codec<
+  // We use the fact that a union of functions is effectively an intersection of parameters
+  // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
+  {
+    [key in keyof TIntersectees]: TIntersectees[key] extends Runtype<infer T>
+      ? (parameter: T) => any
+      : unknown;
+  }[number] extends (k: infer I) => void
+    ? I
+    : never
+>;
 export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
   ...intersectees: TIntersectees
 ): Codec<
@@ -66,6 +93,8 @@ export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
     t: lazyValue(() => allFieldInfoForMode(`t`)),
     s: lazyValue(() => allFieldInfoForMode(`s`)),
   };
+  const mapInternal = (mapper: (t: Codec<any>) => Codec<any>) =>
+    Intersect(...intersectees.map(mapper));
   return create<
     // We use the fact that a union of functions is effectively an intersection of parameters
     // e.g. to safely call (({x: 1}) => void | ({y: 2}) => void) you must pass {x: 1, y: 2}
@@ -151,10 +180,11 @@ export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
         }
         return parenthesize(`${intersectees.map(v => showType(v, true)).join(' & ')}`, needsParens);
       },
-      _asMutable: asMutable => Intersect(...intersectees.map(asMutable)),
-      _asReadonly: asReadonly => Intersect(...intersectees.map(asReadonly)),
-      _pick: (keys, pick) => Intersect(...intersectees.map(t => pick(t, keys))),
-      _omit: (keys, omit) => Intersect(...intersectees.map(t => omit(t, keys))),
+      _asMutable: mapInternal,
+      _asReadonly: mapInternal,
+      _partial: mapInternal,
+      _pick: mapInternal,
+      _omit: mapInternal,
     },
     {
       tag: 'intersect',

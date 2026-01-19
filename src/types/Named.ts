@@ -1,5 +1,13 @@
-import { create, Codec, assertRuntype, showValue } from '../runtype';
+import { create, Codec, assertRuntype, showValue, ObjectCodec } from '../runtype';
 
+export function Named<TUnderlying>(
+  name: string,
+  underlying: ObjectCodec<TUnderlying>,
+): ObjectCodec<TUnderlying>;
+export function Named<TUnderlying>(
+  name: string,
+  underlying: Codec<TUnderlying>,
+): Codec<TUnderlying>;
 export function Named<TUnderlying>(
   name: string,
   underlying: Codec<TUnderlying>,
@@ -11,12 +19,13 @@ export function Named<TUnderlying>(
         innerValidateToPlaceholder(underlying, value),
       _underlyingType: () => underlying,
       _showType: () => name,
-      _asMutable: asMutable => Named(name, asMutable(underlying)),
-      _asReadonly: asReadonly => Named(name, asReadonly(underlying)),
-      _pick: (keys, pick) =>
-        Named(`Pick<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, pick(underlying, keys)),
-      _omit: (keys, omit) =>
-        Named(`Omit<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, omit(underlying, keys)),
+      _asMutable: mapper => Named(name, mapper(underlying)),
+      _asReadonly: mapper => Named(name, mapper(underlying)),
+      _partial: asPartial => Named(`Partial<${name}>`, asPartial(underlying)),
+      _pick: (pick, keys) =>
+        Named(`Pick<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, pick(underlying)),
+      _omit: (omit, keys) =>
+        Named(`Omit<${name}, ${keys.map(v => showValue(v)).join(' | ')}>`, omit(underlying)),
     },
     {
       tag: 'named',
