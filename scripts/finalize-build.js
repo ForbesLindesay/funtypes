@@ -18,7 +18,7 @@ function getExports(filename) {
       case 'ExportNamedDeclaration':
         for (const specifier of statement.specifiers) {
           const exportKind =
-            specifier.exportKind === 'type' ? 'type' : (statement.exportKind ?? 'value');
+            specifier.exportKind === 'type' ? 'type' : statement.exportKind ?? 'value';
           exports[exportKind].push(specifier.exported.name);
         }
         break;
@@ -112,6 +112,7 @@ const replacements = {
   _asReadonly: 'r',
   _pick: 'y',
   _omit: 'x',
+  _partial: 'z',
 };
 readdirSync(`lib`).forEach(f => {
   if (!ALLOWED_FILES.has(f)) {

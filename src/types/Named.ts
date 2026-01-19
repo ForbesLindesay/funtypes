@@ -1,5 +1,13 @@
-import { create, Codec, assertRuntype, showValue } from '../runtype';
+import { create, Codec, assertRuntype, showValue, ObjectCodec } from '../runtype';
 
+export function Named<TUnderlying>(
+  name: string,
+  underlying: ObjectCodec<TUnderlying>,
+): ObjectCodec<TUnderlying>;
+export function Named<TUnderlying>(
+  name: string,
+  underlying: Codec<TUnderlying>,
+): Codec<TUnderlying>;
 export function Named<TUnderlying>(
   name: string,
   underlying: Codec<TUnderlying>,

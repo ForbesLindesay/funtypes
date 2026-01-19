@@ -109,7 +109,10 @@ export interface InternalValidation<TParsed> {
    * asReadonly
    */
   _asReadonly?: (asReadonly: (t: Codec<any>) => Codec<any>) => Codec<any>;
-
+  /**
+   * Make all properties optional
+   */
+  _partial?: (asPartial: (t: Codec<any>) => Codec<any>) => Codec<any>;
   /**
    * Pick keys from an object
    */
@@ -226,6 +229,9 @@ export interface Codec<TParsed> extends Runtype<TParsed> {
    * Apply conversion functions when parsing/serializing this value
    */
   withParser<T>(value: ParsedValueConfig<TParsed, T>): Codec<T>;
+}
+export interface ObjectCodec<TParsed> extends Codec<TParsed> {
+  o: true;
 }
 /**
  * Obtains the static type associated with a Runtype.

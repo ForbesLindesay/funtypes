@@ -1,8 +1,11 @@
-import { assertRuntype, Codec, getInternal } from '../runtype';
+import { assertRuntype, Codec, getInternal, ObjectCodec } from '../runtype';
 
 export function Readonly<const TElements extends unknown[]>(
   input: Codec<TElements>,
 ): Codec<{ readonly [k in keyof TElements]: TElements[k] }>;
+export function Readonly<TObject extends { [key: string]: unknown }>(
+  input: ObjectCodec<TObject>,
+): ObjectCodec<{ readonly [K in keyof TObject]: TObject[K] }>;
 export function Readonly<TObject extends { [key: string]: unknown }>(
   input: Codec<TObject>,
 ): Codec<{ readonly [K in keyof TObject]: TObject[K] }>;

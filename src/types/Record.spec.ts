@@ -1,5 +1,14 @@
 import * as ta from 'type-assertions';
-import { Record, String, Number, Literal, Union, Object as ObjectType, Constraint } from '..';
+import {
+  Record,
+  String,
+  Number,
+  Literal,
+  Union,
+  Object as ObjectType,
+  Constraint,
+  Brand,
+} from '..';
 
 const recordType = ObjectType({ value: Literal(42) });
 const record = { value: 42 };
@@ -7,7 +16,7 @@ const record = { value: 42 };
 test('StringRecord', () => {
   const dictionary = Record(String, recordType);
   ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in string]?: { value: 42 } }>
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in string]?: { value: 42 } }>
   >();
   expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
     {
@@ -46,7 +55,7 @@ test('StringRecord', () => {
 test('NumberRecord', () => {
   const dictionary = Record(Number, recordType);
   ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in number]?: { value: 42 } }>
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in number]?: { value: 42 } }>
   >();
   expect(dictionary.safeParse({ 4: record, 3.14: record })).toMatchInlineSnapshot(`
     {
@@ -72,7 +81,7 @@ test('NumberRecord', () => {
 test('Using Object.create', () => {
   const dictionary = Record(String, recordType);
   ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in string]?: { value: 42 } }>
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in string]?: { value: 42 } }>
   >();
   const record = Object.create(null);
   record.value = 42;
@@ -122,7 +131,7 @@ test('IntegerRecord', () => {
     recordType,
   );
   ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in number]?: { value: 42 } }>
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in number]?: { value: 42 } }>
   >();
   expect(dictionary.safeParse({ 4: record, 2: record })).toMatchInlineSnapshot(`
     {
@@ -148,7 +157,7 @@ test('IntegerRecord', () => {
 test('UnionRecord - strings', () => {
   const dictionary = Record(Union(Literal('foo'), Literal('bar')), recordType);
   ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in 'foo' | 'bar']?: { value: 42 } }>
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in 'foo' | 'bar']?: { value: 42 } }>
   >();
   expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
     {
@@ -173,7 +182,7 @@ test('UnionRecord - strings', () => {
 test('UnionRecord - numbers', () => {
   const dictionary = Record(Union(Literal(24), Literal(42)), recordType);
   ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in 24 | 42]?: { value: 42 } }>
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in 24 | 42]?: { value: 42 } }>
   >();
   expect(dictionary.safeParse({ 24: record, 42: record })).toMatchInlineSnapshot(`
     {
@@ -198,7 +207,7 @@ test('UnionRecord - numbers', () => {
 test('UnionRecord - mixed', () => {
   const dictionary = Record(Union(Literal('foo'), Literal(42)), recordType);
   ta.assert<
-    ta.Equal<ReturnType<(typeof dictionary)['parse']>, { [key in 'foo' | 42]?: { value: 42 } }>
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in 'foo' | 42]?: { value: 42 } }>
   >();
   expect(dictionary.safeParse({ foo: record, 42: record })).toMatchInlineSnapshot(`
     {
@@ -216,6 +225,32 @@ test('UnionRecord - mixed', () => {
   expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
     {
       "message": "Expected record key to be "foo" | 42, but was "bar"",
+      "success": false,
+    }
+  `);
+});
+
+test('Branded Strings Record - strings', () => {
+  const dictionary = Record(Brand('MyBrand', String), recordType);
+  ta.assert<
+    ta.Equal<ReturnType<typeof dictionary['parse']>, { [key in 'foo' | 'bar']?: { value: 42 } }>
+  >();
+  expect(dictionary.safeParse({ foo: record, bar: record })).toMatchInlineSnapshot(`
+    {
+      "success": true,
+      "value": {
+        "bar": {
+          "value": 42,
+        },
+        "foo": {
+          "value": 42,
+        },
+      },
+    }
+  `);
+  expect(dictionary.safeParse({ 10: record })).toMatchInlineSnapshot(`
+    {
+      "message": "Expected record key to be "foo" | "bar", but was "10"",
       "success": false,
     }
   `);
