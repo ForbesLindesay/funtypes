@@ -34,7 +34,7 @@
     }
   },
   "scripts": {
-    "build": "tsc --noEmit && rollup -c && yarn api-extractor run --local && node scripts/finalize-build.js",
+    "build": "tsc --noEmit && rollup -c && api-extractor run --local && node scripts/finalize-build.js",
     "format": "node scripts/format.js",
     "test": "rollup -c && jest $([ \"$CI\" = true ] && echo --coverage || echo --watch)",
     "typecheck": "tsc --noEmit --watch"
@@ -80,5 +80,5 @@
   "publishConfig": {
     "provenance": true
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "npm@11.7.0+sha512.c22099a6fff8d5b2286c2a09df5352b4858a7c0c716320f58989d60ad8b29ecf2ce6fdfe97ccb41c23ffb1272e1fa079f868487dd6b81d02a2a9e199c095a117"
 }

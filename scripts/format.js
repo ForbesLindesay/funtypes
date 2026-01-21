@@ -14,7 +14,7 @@ const command = [process.env.CI ? '--list-different' : '--write', './**/*.{ts,ts
 spawn(`prettier`, command, { stdio: 'inherit' }).on('exit', exitCode => {
   if (exitCode) {
     console.error('Found formatting issues');
-    console.error('Looks like someone forgot to run `yarn format` before pushing 😱');
+    console.error('Looks like someone forgot to run `npm run format` before pushing 😱');
     process.exit(1);
   }
 });
