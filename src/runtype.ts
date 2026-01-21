@@ -157,7 +157,7 @@ export interface Runtype<TParsed = unknown> {
    * Validates the value conforms to this type, and performs
    * the `parse` action for any `ParsedValue` types.
    *
-   * Returns a `Result`, constaining the parsed value or
+   * Returns a `Result`, containing the parsed value or
    * error message. Does not throw!
    */
   safeParse(x: any): Result<TParsed>;

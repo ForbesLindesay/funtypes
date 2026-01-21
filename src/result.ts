@@ -100,6 +100,6 @@ export function showError(failure: Omit<Failure, 'success'>): string {
       ? `${failure.message} in ${failure.key}`
       : failure.message;
 }
-export function showFullError([title, ...children]: FullError, indent: string = ''): string {
+function showFullError([title, ...children]: FullError, indent: string = ''): string {
   return [`${indent}${title}`, ...children.map(e => showFullError(e, `${indent}  `))].join('\n');
 }
