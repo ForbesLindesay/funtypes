@@ -4,7 +4,9 @@ import withSearch from './src/markdoc/search.mjs'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
   pageExtensions: ['js', 'jsx', 'md', 'ts', 'tsx'],
+  outputFileTracingRoot: import.meta.dirname,
 }
 
 export default withSearch(
