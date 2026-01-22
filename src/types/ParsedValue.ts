@@ -1,13 +1,13 @@
-import { failure, Result } from '../result';
+import { failure, Result, success } from '../result';
 import {
   Runtype,
   create,
   Codec,
-  mapValidationPlaceholder,
   assertRuntype,
   innerGuard,
   createGuardVisitedState,
   showType,
+  Cycle,
 } from '../runtype';
 import { Never } from './never';
 
@@ -25,11 +25,56 @@ export function ParsedValue<TUnderlying, TParsed>(
   return create<TParsed>(
     {
       _parse: (value, _innerValidate, innerValidateToPlaceholder) => {
-        return mapValidationPlaceholder<any, TParsed>(
-          innerValidateToPlaceholder(underlying, value),
-          source => config.parse(source),
-          config.test,
-        );
+        const innerResult = innerValidateToPlaceholder(underlying, value);
+        if (!innerResult._cycle) {
+          if (!innerResult.success) return innerResult;
+          const result = config.parse(innerResult.value);
+          return (
+            (result.success &&
+              config.test &&
+              innerGuard(config.test, result.value, createGuardVisitedState(), false, true)) ||
+            result
+          );
+        }
+
+        const placeholder = (
+          Array.isArray(innerResult._placeholder)
+            ? [...innerResult._placeholder]
+            : { ...innerResult._placeholder }
+        ) as TParsed;
+
+        let hasCycle = false;
+        let cache: Result<TParsed> | undefined;
+        const cycle: Cycle<TParsed> = {
+          _cycle: true,
+          _placeholder: placeholder,
+          _unwrap: () => {
+            if (cache) {
+              hasCycle = true;
+              return cache;
+            }
+            cache = success(placeholder);
+
+            const sourceResult = innerResult._unwrap();
+
+            cache = sourceResult.success ? config.parse(sourceResult.value) : sourceResult;
+            if (!cache.success) return cache;
+
+            if (hasCycle && placeholder !== cache.value)
+              cache = attemptMixin(placeholder, cache.value);
+            if (!cache.success) return cache;
+
+            const guardFailure =
+              config.test &&
+              innerGuard(config.test, cache.value, createGuardVisitedState(), false, true);
+            if (guardFailure) return (cache = guardFailure);
+
+            cycle._placeholder = cache.value;
+
+            return cache;
+          },
+        };
+        return cycle;
       },
       _test(value, internalTest, _sealed, isOptionalTest) {
         return config.test
@@ -84,5 +129,30 @@ export function ParsedValue<TUnderlying, TParsed>(
       name: config.name,
       test: config.test,
     },
+  );
+}
+
+function attemptMixin<T>(placeholder: T, value: T): Result<T> {
+  if (Array.isArray(placeholder) && Array.isArray(value)) {
+    placeholder.splice(0, placeholder.length, ...value);
+    return success(placeholder);
+  }
+  if (
+    placeholder &&
+    typeof placeholder === 'object' &&
+    !Array.isArray(placeholder) &&
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value)
+  ) {
+    Object.assign(placeholder, value);
+    return success(placeholder);
+  }
+  return failure(
+    `Cannot convert a value of type "${
+      Array.isArray(placeholder) ? 'Array' : typeof placeholder
+    }" into a value of type "${
+      value === null ? 'null' : Array.isArray(value) ? 'Array' : typeof value
+    }" when it contains cycles.`,
   );
 }

@@ -34,7 +34,7 @@ function InternalArr<TElement>(element: Runtype<TElement>, isReadonly: boolean):
             const validated = innerValidate(
               element,
               xs[i],
-              sealed && sealed.deep ? { deep: true } : false,
+              sealed && sealed._deep ? { _deep: true } : false,
             );
             if (!validated.success) {
               if (!fullError) {

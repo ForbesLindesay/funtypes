@@ -19,9 +19,11 @@ export enum MyEnum {
   A = 1,
   B = 2,
 }
-export const MyEnumSchema = ft.Enum("MyEnum", MyEnum);
+export const MyEnumSchema = ft.Enum(
+  "MyEnum",
+  MyEnum,
+);
 // => ft.Codec<MyEnum>
-
 
 // ✅ Valid reference to enum value
 assert.deepEqual(
@@ -29,11 +31,9 @@ assert.deepEqual(
   MyEnum.A,
 );
 
-// ✅ Valid raw value (equivalent at runtime)
-assert.deepEqual(
-  MyEnumSchema.parse(1),
-  MyEnum.A,
-);
+// ✅ Valid raw value
+//    (equivalent at runtime)
+assert.deepEqual(MyEnumSchema.parse(1), MyEnum.A);
 
 // 🚨 Invalid value:
 assert.throws(() => MyEnumSchema.parse(3));
@@ -49,9 +49,12 @@ import * as ft from "funtypes";
 
 export enum MyEnum {
   A = "letter_a",
-  B = "letter_b"
+  B = "letter_b",
 }
-export const MyEnumSchema = ft.Enum("MyEnum", MyEnum);
+export const MyEnumSchema = ft.Enum(
+  "MyEnum",
+  MyEnum,
+);
 // ft.Codec<MyEnum>
 
 // ✅ Valid reference to enum value
@@ -60,7 +63,8 @@ assert.deepEqual(
   MyEnum.A,
 );
 
-// ✅ Valid raw value (equivalent at runtime)
+// ✅ Valid raw value
+//    (equivalent at runtime)
 assert.deepEqual(
   MyEnumSchema.parse("letter_a"),
   MyEnum.A,

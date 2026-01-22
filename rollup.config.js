@@ -20,23 +20,23 @@ export default {
     typescript({
       typescript: require('typescript'),
     }),
-    terser({
-      format: {
-        ecma: '2020',
-      },
-      compress: {
-        ecma: '2020',
-        hoist_funs: true,
-        passes: 10,
-        pure_getters: true,
-        unsafe_arrows: true,
-        unsafe_methods: true,
-      },
-      mangle: {
-        keep_classnames: true,
-        keep_fnames: true,
-      },
-    }),
+    // terser({
+    //   format: {
+    //     ecma: '2020',
+    //   },
+    //   compress: {
+    //     ecma: '2020',
+    //     hoist_funs: true,
+    //     passes: 10,
+    //     pure_getters: true,
+    //     unsafe_arrows: true,
+    //     unsafe_methods: true,
+    //   },
+    //   mangle: {
+    //     keep_classnames: true,
+    //     keep_fnames: true,
+    //   },
+    // }),
     prettier({
       tabWidth: 2,
       singleQuote: false,

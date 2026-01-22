@@ -11,17 +11,23 @@ Use `ft.Named` to add names to types for use in error messages. This is especial
 ```ts
 import * as ft from "funtypes";
 
-const UserSchema = ft.Named("User", ft.Object({
-  type: ft.Literal("USER"),
-  id: ft.Number,
-  name: ft.String,
-}));
+const UserSchema = ft.Named(
+  "User",
+  ft.Object({
+    type: ft.Literal("USER"),
+    id: ft.Number,
+    name: ft.String,
+  }),
+);
 
-const PostSchema = ft.Named("Post", ft.Object({
-  type: ft.Literal("POST"),
-  id: ft.Number,
-  title: ft.String,
-}));
+const PostSchema = ft.Named(
+  "Post",
+  ft.Object({
+    type: ft.Literal("POST"),
+    id: ft.Number,
+    title: ft.String,
+  }),
+);
 
 export const DbObjectSchema = ft.Union(
   UserSchema,
@@ -29,14 +35,16 @@ export const DbObjectSchema = ft.Union(
 );
 // => ft.Codec<{ type: "USER"; id: number; name: string } | { type: "POST"; id: number; title: string }>
 
-export type DbObjectType = ft.Static<typeof DbObjectSchema>;
+export type DbObjectType = ft.Static<
+  typeof DbObjectSchema
+>;
 // => { type: "USER"; id: number; name: string } | { type: "POST"; id: number; title: string }
 
-
-// ✅ Instead of printing out the full type, it just refers to sub-types by name
+// ✅ Instead of printing out the full type, it
+//    just refers to sub-types by name
 assert.deepEqual(
   ft.showType(DbObjectSchema),
-  "User | Post"
+  "User | Post",
 );
 ```
 

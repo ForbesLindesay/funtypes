@@ -20,7 +20,7 @@ export const UserCodec = ft.Object({
 // => ft.Codec<{ id: number; name: string }>
 
 assert.deepEqual(
-  ft.showType(UserCodec)
+  ft.showType(UserCodec),
   "{ id: number; name: string }",
 );
 ```

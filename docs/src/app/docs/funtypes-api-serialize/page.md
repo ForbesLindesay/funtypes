@@ -12,7 +12,7 @@ For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from 'funtypes-schemas';
+import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
@@ -21,12 +21,15 @@ export const UserCodec = ft.Object({
 });
 // => ft.Codec<{ id: number; name: string; dateOfBirth: Date }>
 
-// ✅ Serializes the date object to a string
+// ✅ Serializes the date object to a
+//   string
 assert.deepEqual(
   UserCodec.parse({
     id: 1,
     name: "Forbes Lindesay",
-    dateOfBirth: new Date("1970-01-01T00:00:00.000Z"),
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
   }),
   {
     id: 1,
@@ -35,25 +38,32 @@ assert.deepEqual(
   },
 );
 
-// 🚨 Invalid: id should be a number, but here we've
-//    passed a string instead.
+// 🚨 Invalid: id should be a number, but here
+//    we've passed a string instead.
 assert.throws(() => {
   UserCodec.serialize({
-    // @ts-expect-error - TypeScript will expect the object passed to `serialize` to be valid
+    // TypeScript will expect the object passed
+    // to `serialize` to be valid.
+    // @ts-expect-error
     id: "42",
     name: "Forbes Lindesay",
-    dateOfBirth: new Date("1970-01-01T00:00:00.000Z")
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
   });
 });
 
-// 🚨 Invalid: dateOfBirth is already a string, but the
-//    parsed value should have been a Date.
+// 🚨 Invalid: dateOfBirth is already a string,
+//    but the parsed value should have been a
+//    Date.
 assert.throws(() => {
   UserCodec.serialize({
     id: 1,
     name: "Forbes Lindesay",
-    // @ts-expect-error - TypeScript will expect the object passed to `serialize` to be valid
-    dateOfBirth: "1970-01-01T00:00:00.000Z"
-  })
+    // TypeScript will expect the object passed
+    // to `serialize` to be valid.
+    // @ts-expect-error
+    dateOfBirth: "1970-01-01T00:00:00.000Z",
+  });
 });
 ```

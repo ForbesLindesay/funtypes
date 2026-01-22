@@ -12,7 +12,7 @@ For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from 'funtypes-schemas';
+import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
@@ -26,7 +26,9 @@ assert.deepEqual(
   UserCodec.safeSerialize({
     id: 1,
     name: "Forbes Lindesay",
-    dateOfBirth: new Date("1970-01-01T00:00:00.000Z"),
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
   }),
   {
     success: true,
@@ -38,13 +40,17 @@ assert.deepEqual(
   },
 );
 
-// 🚨 Invalid: id should be a number, but here we've
-//    passed a string instead.
+// 🚨 Invalid: id should be a number, but here
+//    we've passed a string instead.
 const failedResult = UserCodec.safeSerialize({
-    // @ts-expect-error - TypeScript will expect the object passed to `safeSerialize` to be valid
+  // TypeScript will expect the object passed
+  // to `safeSerialize` to be valid.
+  // @ts-expect-error
   id: "42",
   name: "Forbes Lindesay",
-  dateOfBirth: new Date("1970-01-01T00:00:00.000Z")
+  dateOfBirth: new Date(
+    "1970-01-01T00:00:00.000Z",
+  ),
 });
 assert.deepEqual(failedResult.success, false);
 console.log(ft.showError(failedResult));

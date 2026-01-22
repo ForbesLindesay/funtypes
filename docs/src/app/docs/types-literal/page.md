@@ -19,19 +19,28 @@ export const ObjectKindSchema = ft.Union(
 );
 // => ft.Codec<"USER" | "POST">
 
-export type ObjectKind = ft.Static<typeof ObjectKindSchema>;
+export type ObjectKind = ft.Static<
+  typeof ObjectKindSchema
+>;
 // => "USER" | "POST"
 
-
 // ✅ Valid value
-assert.deepEqual(ObjectKindSchema.parse("USER"), "USER");
-assert.deepEqual(ObjectKindSchema.parse("POST"), "POST");
+assert.deepEqual(
+  ObjectKindSchema.parse("USER"),
+  "USER",
+);
+assert.deepEqual(
+  ObjectKindSchema.parse("POST"),
+  "POST",
+);
 
 // 🚨 Invalid value
 assert.throws(() => ObjectKindSchema.parse(42));
 
 // 🚨 Invalid value
-assert.throws(() => ObjectKindSchema.parse("SOME_OTHER_STRING"));å
+assert.throws(() =>
+  ObjectKindSchema.parse("SOME_OTHER_STRING"),
+);
 ```
 
 {% callout title="Funtypes provides ft.Null and ft.Undefined" %}

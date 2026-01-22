@@ -1,5 +1,5 @@
 import { failure, success } from '../result';
-import { create, Codec, showValueNonString } from '../runtype';
+import { create, Codec, showValue } from '../runtype';
 
 function createPrimitive<
   TType extends 'boolean' | 'function' | 'number' | 'string' | 'symbol' | 'bigint',
@@ -9,7 +9,9 @@ function createPrimitive<
     value =>
       typeof value === type
         ? success<TValue>(value)
-        : failure(`Expected ${type}, but was ${showValueNonString(value)}`),
+        : failure(
+            `Expected ${type}, but was ${showValue(value)}${typeof value === 'string' ? ` (i.e. a string literal)` : ``}`,
+          ),
     { tag: type },
   );
 }

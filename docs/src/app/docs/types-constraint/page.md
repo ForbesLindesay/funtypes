@@ -23,15 +23,25 @@ Here's an example using `.withConstraint` to define a custom `NonEmptyArray` cod
 import * as ft from "funtypes";
 
 function NonEmptyArray<T>(element: ft.Codec<T>) {
-  return ft.Array(element).withConstraint(
-    value => value.length ? true : "Array must contain at least one element",
-    { name: `NonEmptyArray<${ft.showType(element)}>` }
-  )
+  return ft
+    .Array(element)
+    .withConstraint(
+      (value) =>
+        value.length
+          ? true
+          : "Array must contain at least one element",
+      {
+        name: `NonEmptyArray<${ft.showType(element)}>`,
+      },
+    );
 }
 
-export const NonEmptyNumbersArrayCodec = NonEmptyArray(ft.Number);
+export const NonEmptyNumbersArrayCodec =
+  NonEmptyArray(ft.Number);
 // => ft.Codec<number[]>
-export type NonEmptyNumbersArray = ft.Static<typeof NonEmptyNumbersArrayCodec>
+export type NonEmptyNumbersArray = ft.Static<
+  typeof NonEmptyNumbersArrayCodec
+>;
 // => number[]
 
 // ✅ Valid array of numbers
@@ -44,7 +54,9 @@ assert.deepEqual(
 assert.throws(() => MyArraySchema.parse([]));
 
 // 🚨 Array contains something other than numbers
-assert.throws(() => MyArraySchema.parse([1, "2", 3]));
+assert.throws(() =>
+  MyArraySchema.parse([1, "2", 3]),
+);
 ```
 
 You could equivalently write the `NonEmptyArray` function as:
@@ -53,9 +65,14 @@ You could equivalently write the `NonEmptyArray` function as:
 function NonEmptyArray<T>(element: ft.Codec<T>) {
   return ft.Constraint(
     ft.Array(element),
-    value => value.length ? true : "Array must contain at least one element",
-    { name: `NonEmptyArray<${ft.showType(element)}>` }
-  )
+    (value) =>
+      value.length
+        ? true
+        : "Array must contain at least one element",
+    {
+      name: `NonEmptyArray<${ft.showType(element)}>`,
+    },
+  );
 }
 ```
 
@@ -68,15 +85,17 @@ Here we'll use `.withGuard` to define an `EmailCodec`, making use of an existing
 ```ts
 import * as ft from "funtypes";
 
-type EmailString = `${string}@${string}`
-export function isEmail(email: string): email is EmailString {
-  return email.includes('@');
+type EmailString = `${string}@${string}`;
+export function isEmail(
+  email: string,
+): email is EmailString {
+  return email.includes("@");
 }
 
-const EmailCodec = ft.String.withGuard(isEmail, { name: "EmailString" });
+const EmailCodec = ft.String.withGuard(isEmail, {
+  name: "EmailString",
+});
 // => Codec<EmailString>
-
-
 
 // ✅ Valid email
 assert.deepEqual(
@@ -96,15 +115,20 @@ The `ft.Guard` utility is slightly different in that it assumes a base type of `
 ```ts
 import * as ft from "funtypes";
 
-type EmailString = `${string}@${string}`
-export function isEmail(email: unknown): email is EmailString {
-  return typeof email === 'string' && email.includes('@');
+type EmailString = `${string}@${string}`;
+export function isEmail(
+  email: unknown,
+): email is EmailString {
+  return (
+    typeof email === "string" &&
+    email.includes("@")
+  );
 }
 
-const EmailCodec = ft.Guard(isEmail, { name: "EmailString" });
+const EmailCodec = ft.Guard(isEmail, {
+  name: "EmailString",
+});
 // => Codec<EmailString>
-
-
 
 // ✅ Valid email
 assert.deepEqual(

@@ -1,141 +1,219 @@
 ---
-title: Getting started
+title: Why Funtypes?
 ---
 
-Funtypes allow you to take values about which you have no assurances and check that they conform to some type `A`. It also lets you parse serialized values into rich objects. This is done by means of composable type validators of primitives, literals, arrays, tuples, records, unions,
-intersections and more.
+It's important for security that you validate any un-trusted data, such as the JSON body of a request to your backend API. It's also hugely helpful for troubleshooting issues, as you can have a clear error as soon as you get the data that doesn't match your TypeScript types, rather than an obscure error about some undefined value or method, buried several layers deep in function calls.
 
-## Installation
+There are lots of other libraries for doing runtime validation of data though, so what makes Funtypes special?
 
-```sh
-npm install --save funtypes
-```
+## Excellent Type Inference
 
-## Example
-
-Suppose you have objects which represent asteroids, planets, ships and crew members. In TypeScript, you might write their types like so:
+Once you define an object Codec in Funtypes, Funtypes can also generate the static type for you so you never need any unsafe type casts and you don't need to repeat yourself. For example, here we get the `User` type from the codec, without needing to re-define the properties of the type.
 
 ```ts
-type Vector = [number, number, number];
+import * as ft from "funtypes";
 
-type Asteroid = {
-  type: 'asteroid';
-  location: Vector;
-  mass: number;
-};
+const UserCodec = ft.Object({
+  id: ft.Number,
+  name: ft.String,
+});
+// => Codec<{ id: number; name: string }>
 
-type Planet = {
-  type: 'planet';
-  location: Vector;
-  mass: number;
-  population: number;
-  habitable: boolean;
-};
+type User = ft.Static<typeof UserCodec>;
+// => { id: number; name: string }
 
-type Rank = 'captain' | 'first mate' | 'officer' | 'ensign';
-
-type CrewMember = {
-  name: string;
-  age: number;
-  rank: Rank;
-  home: Planet;
-};
-
-type Ship = {
-  type: 'ship';
-  location: Vector;
-  mass: number;
-  name: string;
-  crew: CrewMember[];
-};
-
-type SpaceObject = Asteroid | Planet | Ship;
+// Returns a `User` type, throws if requestBody
+// is not a valid User
+function asUser(requestBody: unknown) {
+  return UserCodec.parse(requestBody);
+}
 ```
 
-If the objects which are supposed to have these shapes are loaded from some external source, perhaps a JSON file, we need to validate that the objects conform to their specifications. We do so by building corresponding `Codec`s in a similar structure to the TypeScript types:
+## Useful Errors
+
+Funtypes always provides the detail you need in error messages to figure out **why** the object you passed in doesn't match the Codec. Every other library I've tried has error messages that are difficult to understand, especially when dealing with unions of many different object types.
+
+For example:
 
 ```ts
-import * as ft from 'funtypes';
+import * as ft from "funtypes";
 
-const Vector = ft.Tuple(ft.Number, ft.Number, ft.Number);
-
-const Asteroid = ft.Object({
-  type: ft.Literal('asteroid'),
-  location: Vector,
-  mass: ft.Number,
-});
-
-const Planet = ft.Object({
-  type: ft.Literal('planet'),
-  location: Vector,
-  mass: ft.Number,
-  population: ft.Number,
-  habitable: ft.Boolean,
-});
-
-const Rank = ft.Union(
-  ft.Literal('captain'),
-  ft.Literal('first mate'),
-  ft.Literal('officer'),
-  ft.Literal('ensign'),
+const UserCodec = ft.Named(
+  "User",
+  ft.Object({
+    type: ft.Literal("USER"),
+    id: ft.Number,
+    name: ft.String,
+  }),
+);
+const PostCodec = ft.Named(
+  "Post",
+  ft.Object({
+    type: ft.Literal("POST"),
+    id: ft.Number,
+    title: ft.String,
+  }),
+);
+const ObjectCodec = ft.Union(
+  UserCodec,
+  PostCodec,
 );
 
-const CrewMember = ft.Object({
-  name: ft.String,
-  age: ft.Number,
-  rank: Rank,
-  home: Planet,
+ObjectCodec.parse({
+  type: "USER",
+  id: 42,
+  title: "Forbes Lindesay",
+});
+```
+
+Outputs the validation error:
+
+```txt
+ValidationError: Unable to assign {type: "USER", id: 42, title: "Forbes Lindesay"} to User | Post
+  Unable to assign {type: "USER", id: 42, title: "Forbes Lindesay"} to { type: "USER"; id: number; name: string }
+    The types of "name" are not compatible
+      Expected string, but was undefined
+```
+
+Funtypes can see that `type` is meant to determine which of the codecs in the Union to use, so it doesn't print a separate error for the PostCodec.
+
+If we didn't include the `type`, we can still get a useful (albeit more verbose error):
+
+```ts
+import * as ft from "funtypes";
+
+const UserCodec = ft.Named(
+  "User",
+  ft.Object({
+    id: ft.Number,
+    name: ft.String,
+  }),
+);
+const PostCodec = ft.Named(
+  "Post",
+  ft.Object({
+    id: ft.Number,
+    title: ft.String,
+  }),
+);
+const ObjectCodec = ft.Union(
+  UserCodec,
+  PostCodec,
+);
+
+ObjectCodec.parse({ id: 42 });
+```
+
+```txt
+ValidationError: Unable to assign {id: 42} to User | Post
+  Unable to assign {id: 42} to { id: number; name: string }
+    The types of "name" are not compatible
+      Expected string, but was undefined
+  And unable to assign {id: 42} to { id: number; title: string }
+    The types of "title" are not compatible
+      Expected string, but was undefined
+```
+
+This error can be read like a proof:
+
+1. It first tells us `{id: 42}` is not assignable to `User | Post`.
+2. Next, it tells us why it's not assignable to `User` - because it's missing the `name` property.
+3. Finally, it tells us why it's not assignable to `Post` - because it's missing the `title` property.
+
+Other validation libraries I've tested make that type of error nearly impossible to troubleshoot.
+
+## Beyond Validation
+
+Funtypes codecs are not just for validating, they can also simultaneously handle parsing and serializing. These things being integrated is extremely useful, as it means that once you've defined a "Codec" for some type that needs to be parsed and serialized, you can put it anywhere in your codecs and have it work transparently.
+
+```ts
+import * as ft from "funtypes";
+import * as s from "funtypes-schemas";
+
+const PostCodec = ft.Object({
+  id: ft.Number,
+  title: ft.String,
+  url: s.ParsedUrlString(),
 });
 
-const Ship = ft.Object({
-  type: ft.Literal('ship'),
-  location: Vector,
-  mass: ft.Number,
-  name: ft.String,
-  crew: ft.Array(CrewMember),
+assert.deepEqual(
+  PostCodec.parse({
+    id: 42,
+    title: "Example Post",
+    url: "http://example.com",
+  }),
+  {
+    id: 42,
+    title: "Example Post",
+    url: new URL("http://example.com"),
+  },
+);
+
+assert.deepEqual(
+  PostCodec.serialize({
+    id: 42,
+    title: "Example Post",
+    url: new URL("http://example.com"),
+  }),
+  {
+    id: 42,
+    title: "Example Post",
+    url: "http://example.com",
+  },
+);
+```
+
+## Handling Data Migration
+
+Using Codecs that parse the value, not just validate it, you can create a Funtypes Codec that automatically migrates data from an older schema:
+
+```ts
+import * as ft from "funtypes";
+
+const LegacyUserCodec = ft.Object({
+  id: ft.Number,
 });
+const ModernUserCodec = ft.Object({
+  id: ft.Number,
+  name: ft.String,
+});
+const UserCodec = ft.Union(
+  ModernUserCodec,
+  // If the data doesn't match the ModernUserCodec,
+  // Funtypes will try matching it against the
+  // LegacyUserCodec instead, and if it's successful,
+  // Funtypes will transform the value using the
+  // `parse` function we provide here.
+  LegacyUserCodec.withParser({
+    parse(user) {
+      return {
+        success: true,
+        value: { ...user, name: "Anonymous" },
+      };
+    },
+  }),
+);
+// => Codec<{ id: number; name: string }>
 
-const SpaceObject = ft.Union(Asteroid, Planet, Ship);
+// ✅ The legacy user will be migrated by adding a
+//    default value for the new "name" property.
+assert.deepEqual(
+  UserCodec.parse({
+    id: 42,
+  }),
+  {
+    id: 42,
+    name: "Anonymous",
+  },
+);
 ```
 
-Now if we are given a `SpaceObject` from an untrusted source, we can validate it like so:
+## Small Bundle Size
 
-```ts
-// spaceObject: SpaceObject
-const spaceObject = SpaceObject.parse(obj);
-```
+Funtypes is small and is designed to support tree shaking, so if you don't use every feature you might get a bundle size as low as 2.37KB once GZipped [1](https://bundlejs.com/?q=funtypes%406.0.0&treeshake=%5B%7BString%7D%5D). If you use every feature, it's still just 6.43 kB once GZipped [2](https://bundlejs.com/?q=funtypes%406.0.0&treeshake=%5B*%5D).
 
-If the object doesn't conform to the type specification, `parse` will throw an exception.
+## Easily Extendible
 
-## Static type inference
+You can easily define custom types with additional constraints, and even Codecs for types that need custom parsing/serializing logic.
 
-In TypeScript, the inferred type of `Asteroid` in the above example is
-
-```ts
-ft.Codec<{
-  type: 'asteroid'
-  location: [number, number, number]
-  mass: number
-}>
-```
-
-That is, it's a `Codec<Asteroid>`, and you could annotate it as such. But we don't really have to define the
-`Asteroid` type in TypeScript at all now, because the inferred type is correct. Defining each of your types
-twice, once at the type level and then again at the value level, is a pain and not very [DRY](https://en.wikipedia.org/wiki/Don't_repeat_yourself).
-Fortunately you can define a static `Asteroid` type which is an alias to the `Codec`-derived type like so:
-
-```ts
-import * as ft from 'funtypes';
-
-type Asteroid = ft.Static<typeof Asteroid>;
-```
-
-which achieves the same result as
-
-```ts
-type Asteroid = {
-  type: 'asteroid';
-  location: [number, number, number];
-  mass: number;
-};
-```
+For more on this, check out [Constraint & Guard](/docs/types-constraint) or [ParsedValue](/docs/types-parsed-value).

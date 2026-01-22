@@ -11,8 +11,9 @@ import {
   Named,
   Constraint,
   Brand,
+  Unknown,
+  Null,
 } from '..';
-import { Null } from './literal';
 
 // const ThreeOrString = Union(Literal(3), String);
 
@@ -954,4 +955,38 @@ describe('union', () => {
             Expected string, but was undefined"
     `);
   });
+});
+
+test('Union handles Unknown correctly', () => {
+  const UpperString = String.withParser({
+    test: String,
+    parse(value) {
+      return { success: true, value: value.toUpperCase() };
+    },
+    serialize(value) {
+      return { success: true, value: value.toLowerCase() };
+    },
+  });
+  const InvertedNumber = Number.withParser({
+    test: Number,
+    parse(value) {
+      return { success: true, value: value * -1 };
+    },
+    serialize(value) {
+      return { success: true, value: value * -1 };
+    },
+  });
+  const MyUnion = Union(UpperString, Unknown, InvertedNumber);
+
+  // String was before Unknown, so it should be picked
+  expect(MyUnion.parse('hello')).toBe('HELLO');
+  expect(MyUnion.serialize('WORLD')).toBe('world');
+
+  // Number was after Unknown, so Unknown should be picked
+  expect(MyUnion.parse(42)).toBe(42);
+  expect(MyUnion.serialize(-99)).toBe(-99);
+
+  // Other types should also pick Unknown
+  expect(MyUnion.parse(true)).toBe(true);
+  expect(MyUnion.serialize(false)).toBe(false);
 });

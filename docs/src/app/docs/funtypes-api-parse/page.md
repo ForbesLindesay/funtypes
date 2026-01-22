@@ -12,7 +12,7 @@ For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from 'funtypes-schemas';
+import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
@@ -31,27 +31,32 @@ assert.deepEqual(
   {
     id: 1,
     name: "Forbes Lindesay",
-    dateOfBirth: new Date("1970-01-01T00:00:00.000Z"),
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
   },
 );
 
-// 🚨 Invalid: id should be a number, but here we've
-//    passed a string instead.
+// 🚨 Invalid: id should be a number, but here
+//    we've passed a string instead.
 assert.throws(() => {
   UserCodec.parse({
     id: "42",
     name: "Forbes Lindesay",
-    dateOfBirth: "1970-01-01T00:00:00.000Z"
+    dateOfBirth: "1970-01-01T00:00:00.000Z",
   });
 });
 
-// 🚨 Invalid: dateOfBirth is already a Date, but the
-//    serialized value should have been as string.
+// 🚨 Invalid: dateOfBirth is already a Date, but
+//    the serialized value should have been as
+//    string.
 assert.throws(() => {
   UserCodec.parse({
     id: 1,
     name: "Forbes Lindesay",
-    dateOfBirth: new Date("1970-01-01T00:00:00.000Z")
-  })
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
+  });
 });
 ```

@@ -22,15 +22,19 @@ export class User {
 export const UserSchema = ft.InstanceOf(User);
 // => ft.Codec<User>
 
-
 // ✅ Valid instance of User:
 assert.deepEqual(
   UserSchema.parse(new User("Forbes Lindesay")),
   new User("Forbes Lindesay"),
 );
 
-// 🚨 Correct shape, but not an instance of the class:
-assert.throws(() => UserSchema.parse({ name: "Forbes Lindesay" }));
+// 🚨 Correct shape, but not an instance
+//    of the class:
+assert.throws(() =>
+  UserSchema.parse({
+    name: "Forbes Lindesay",
+  }),
+);
 
 // 🚨 Invalid value:
 assert.throws(() => UserSchema.parse("A"));

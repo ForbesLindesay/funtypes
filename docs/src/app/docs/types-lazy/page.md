@@ -17,7 +17,9 @@ interface LinkedList<T> {
   value: T;
   next: LinkedList<T> | null;
 }
-const LinkedListCodec = <T>(value: ft.Codec<T>) => {
+const LinkedListCodec = <T,>(
+  value: ft.Codec<T>,
+) => {
   const ListNode = ft.Lazy(
     (): ft.Codec<LinkedList<T>> =>
       ft.Object({
@@ -27,30 +29,41 @@ const LinkedListCodec = <T>(value: ft.Codec<T>) => {
   );
   return ListNode;
 };
-const NumberLinkedListCodec = LinkedListCodec(ft.Number);
+const NumberLinkedListCodec = LinkedListCodec(
+  ft.Number,
+);
 
 // ✅ Valid nested structure
 assert.deepEqual(
-  NumberLinkedListCodec.parse(
-    { value: 1, next: { value: 2, next: null } },
-  )
-  { value: 1, next: { value: 2, next: null } }
-)
+  NumberLinkedListCodec.parse({
+    value: 1,
+    next: { value: 2, next: null },
+  }),
+  {
+    value: 1,
+    next: { value: 2, next: null },
+  },
+);
 
 // ✅ Cycles in these recursive structures are ok
-const NumberLoop = { value: 1, next: { value: 2, next: null } }
+const NumberLoop = {
+  value: 1,
+  next: { value: 2, next: null },
+};
 NumberLoop.next.next = NumberLoop;
 assert.deepEqual(
   NumberLinkedListCodec.parse(NumberLoop),
   NumberLoop,
 );
 
-// 🚨 Nested value is invalid because v.next.next is `false`
+// 🚨 Nested value is invalid because v.next.next
+//    is `false`
 assert.throws(() => {
-  NumberLinkedListCodec.parse(
-    { value: 1, next: { value: 2, next: false } },
-  );
-})
+  NumberLinkedListCodec.parse({
+    value: 1,
+    next: { value: 2, next: false },
+  });
+});
 ```
 
 {% callout title="TypeScript can't infer recursive types" %}

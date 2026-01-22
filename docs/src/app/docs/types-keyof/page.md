@@ -16,17 +16,24 @@ import * as ft from "funtypes";
 export const UserKeySchema = ft.KeyOf({
   id: {},
   name: {},
-})
+});
 // => ft.Codec<"id" | "name">
 
-export type UserKey = ft.Static<typeof UserKeySchema>;
+export type UserKey = ft.Static<
+  typeof UserKeySchema
+>;
 // => "id" | "name"
 
 // ✅ Valid key
-assert.deepEqual(UserKeySchema.parse("name"), "name");
+assert.deepEqual(
+  UserKeySchema.parse("name"),
+  "name",
+);
 
 // 🚨 Invalid key
-assert.throws(() => UserKeySchema.parse("other_string"));
+assert.throws(() =>
+  UserKeySchema.parse("other_string"),
+);
 
 // 🚨 Totally different type
 assert.throws(() => UserKeySchema.parse([42]));
@@ -40,7 +47,7 @@ If the type has numeric keys, we allow both the number and the string as valid v
 export const MyKeySchema = ft.KeyOf({
   42: {},
   five: {},
-})
+});
 // => ft.Codec<42 | "42" | "five">
 
 export type MyKey = ft.Static<typeof MyKeySchema>;
@@ -53,13 +60,18 @@ assert.deepEqual(UserKeySchema.parse(42), 42);
 assert.deepEqual(UserKeySchema.parse("42"), "42");
 
 // ✅ Valid string key
-assert.deepEqual(UserKeySchema.parse("five"), "five");
+assert.deepEqual(
+  UserKeySchema.parse("five"),
+  "five",
+);
 
 // 🚨 Invalid number key
 assert.throws(() => UserKeySchema.parse(1));
 
 // 🚨 Invalid string key
-assert.throws(() => UserKeySchema.parse("other_string"));
+assert.throws(() =>
+  UserKeySchema.parse("other_string"),
+);
 
 // 🚨 Totally different type
 assert.throws(() => UserKeySchema.parse([42]));
@@ -69,15 +81,14 @@ assert.throws(() => UserKeySchema.parse([42]));
 TypeScript gives a different type to `{ "42": {} }` vs. `{ 42: {} }` but they have the same type at runtime, so we can't tell them apart. Because of this, we'll allow both the numeric representation and the string representation at runtime, but if you use `{ "42": {} }`, the static types will incorrectly only include the string representation.
 
 ```ts
-export const MyKeySchema = ft.KeyOf({ "42": {} })
+export const MyKeySchema = ft.KeyOf({
+  "42": {},
+});
 // => ft.Codec<"42">
 
-// The types would suggest that this should throw,
-// but it does not.
-assert.deepEqual(
-  MyKeySchema.parse(42),
-  42,
-);
+// The types would suggest that this should
+// throw, but it does not.
+assert.deepEqual(MyKeySchema.parse(42), 42);
 ```
 
 {% /callout %}

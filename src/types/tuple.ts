@@ -61,7 +61,7 @@ function TupleCore<const T extends readonly Runtype<unknown>[]>(
             let validatedComponent = innerValidate(
               components[i],
               x[i],
-              sealed && sealed.deep ? { deep: true } : false,
+              sealed && sealed._deep ? { _deep: true } : false,
             );
 
             if (!validatedComponent.success) {

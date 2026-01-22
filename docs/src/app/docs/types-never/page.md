@@ -16,7 +16,8 @@ const MySchema = ft.Never;
 type MyType = ft.Static<typeof MySchema>;
 // => never
 
-// 🚨 Never will always throw when you try to parse something
+// 🚨 Never will always throw when you try to
+//    parse something
 assert.throws(() => MySchema.parse({}));
 ```
 
@@ -25,10 +26,7 @@ If you use `ft.Never` inside a `Union`, it's effectively removed from the list o
 ```ts
 import * as ft from "funtypes";
 
-const MyUnion = ft.Union(
-  ft.String,
-  ft.Never,
-);
+const MyUnion = ft.Union(ft.String, ft.Never);
 // => ft.Codec<string>
 
 type MyType = ft.Static<typeof MySchema>;

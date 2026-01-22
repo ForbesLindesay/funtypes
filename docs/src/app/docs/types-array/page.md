@@ -15,7 +15,9 @@ import * as ft from "funtypes";
 
 export const MyArraySchema = ft.Array(ft.Number);
 // => ft.Codec<number[]>
-export type MyArray = ft.Static<typeof MyArraySchema>
+export type MyArray = ft.Static<
+  typeof MyArraySchema
+>;
 // => number[]
 
 // ✅ Valid array of numbers
@@ -25,10 +27,14 @@ assert.deepEqual(
 );
 
 // 🚨 Array contains something other than numbers
-assert.throws(() => MyArraySchema.parse([1, "2", 3]));
+assert.throws(() =>
+  MyArraySchema.parse([1, "2", 3]),
+);
 
 // 🚨 Not an array
-assert.throws(() => MyArraySchema.parse({0: 1, 1: 2, 2: 3}));
+assert.throws(() =>
+  MyArraySchema.parse({ 0: 1, 1: 2, 2: 3 }),
+);
 ```
 
 ## Array of parsed values
@@ -41,25 +47,35 @@ const ParsedIntegerString = ft.String.withParser({
     if (!/^\d+$/.test(value)) {
       return {
         success: false,
-        message: `Expected an integer string but got ${JSON.stringify(value)}`
-      }
+        message: `Expected an integer string but got ${JSON.stringify(value)}`,
+      };
     }
-    return { success: true, value: parseInt(value, 10) }
-  }
+    return {
+      success: true,
+      value: parseInt(value, 10),
+    };
+  },
   serialize(value) {
     if (value !== (value | 0)) {
       return {
         success: false,
-        message: `Expected an integer but got ${JSON.stringify(value)}`
-      }
+        message: `Expected an integer but got ${JSON.stringify(value)}`,
+      };
     }
-    return { success: true, value: value.toString() }
-  }
-})
+    return {
+      success: true,
+      value: value.toString(),
+    };
+  },
+});
 
-export const MyArraySchema = ft.Array(ParsedIntegerString);
+export const MyArraySchema = ft.Array(
+  ParsedIntegerString,
+);
 // => ft.Codec<number[]>
-export type MyArray = ft.Static<typeof MyArraySchema>
+export type MyArray = ft.Static<
+  typeof MyArraySchema
+>;
 // => number[]
 
 // ✅ Valid array of integer strings
@@ -74,14 +90,22 @@ assert.deepEqual(
   ["1", "2", "3"],
 );
 
-// 🚨 Array contains something other than integer strings
-assert.throws(() => MyArraySchema.parse(["1", "2", "3.14"]));
+// 🚨 Array contains something other than integer
+//    strings
+assert.throws(() =>
+  MyArraySchema.parse(["1", "2", "3.14"]),
+);
 
-// 🚨 Array to serialize contains something other than integers
-assert.throws(() => MyArraySchema.serialize([1, 2, 3.14]));
+// 🚨 Array to serialize contains something other
+//    than integers
+assert.throws(() =>
+  MyArraySchema.serialize([1, 2, 3.14]),
+);
 
 // 🚨 Not an array
-assert.throws(() => MyArraySchema.parse({0: "1", 1: "2", 2: "3"}));
+assert.throws(() =>
+  MyArraySchema.parse({ 0: "1", 1: "2", 2: "3" }),
+);
 ```
 
 ## ReadonlyArray
@@ -91,9 +115,13 @@ The `ft.ReadonlyArray` type has the same runtime behaviour as `ft.Array`, but th
 ```ts
 import * as ft from "funtypes";
 
-export const MyArraySchema = ft.ReadonlyArray(ft.Number);
+export const MyArraySchema = ft.ReadonlyArray(
+  ft.Number,
+);
 // => ft.Codec<readonly number[]>
-export type MyArray = ft.Static<typeof MyArraySchema>
+export type MyArray = ft.Static<
+  typeof MyArraySchema
+>;
 // => readonly number[]
 
 // ✅ Valid array of numbers
@@ -103,8 +131,12 @@ assert.deepEqual(
 );
 
 // 🚨 Array contains something other than numbers
-assert.throws(() => MyArraySchema.parse([1, "2", 3]));
+assert.throws(() =>
+  MyArraySchema.parse([1, "2", 3]),
+);
 
 // 🚨 Not an array
-assert.throws(() => MyArraySchema.parse({0: 1, 1: 2, 2: 3}));
+assert.throws(() =>
+  MyArraySchema.parse({ 0: 1, 1: 2, 2: 3 }),
+);
 ```

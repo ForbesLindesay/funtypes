@@ -22,7 +22,7 @@ export type User = ft.Static<typeof UserCodec>;
 
 assert.deepEqual(
   ft.showType(UserCodec),
-  "{ id: number; name: string | undefined }"
+  "{ id: number; name: string | undefined }",
 );
 
 // ✅ Valid object with correct keys
@@ -37,7 +37,8 @@ assert.deepEqual(
   },
 );
 
-// ✅ Extra keys are ignored when parsing (use `Sealed` to prevent this)
+// ✅ Extra keys are ignored when parsing
+//    (use `Sealed` to prevent this)
 assert.deepEqual(
   UserCodec.parse({
     id: 1,
@@ -50,9 +51,10 @@ assert.deepEqual(
   },
 );
 
-// ✅ No runtime distinction is made between missing
-//    properties and `undefined`, but Funtypes populates
-//    the missing key unless you use `ft.Partial`.
+// ✅ No runtime distinction is made between
+//    missing properties and `undefined`, but
+//    Funtypes populates the missing key unless
+//    you use `ft.Partial`.
 assert.deepEqual(
   UserCodec.parse({
     id: 1,
@@ -63,15 +65,14 @@ assert.deepEqual(
   },
 );
 
-// 🚨 Invalid: id should be a number, but here we've
-//    passed a string instead.
+// 🚨 Invalid: id should be a number, but here
+//    we've passed a string instead.
 assert.throws(() => {
   UserCodec.parse({
     id: "42",
     name: "Forbes Lindesay",
   });
 });
-
 
 // 🚨 Invalid: Missing required property, "id"
 assert.throws(() => {
@@ -99,7 +100,7 @@ export type User = ft.Static<typeof UserCodec>;
 
 assert.deepEqual(
   ft.showType(UserCodec),
-  "{ readonly id: number; readonly name: string | undefined }"
+  "{ readonly id: number; readonly name: string | undefined }",
 );
 ```
 
@@ -109,9 +110,13 @@ If you need to make some properties readonly but others mutable, you can use `ft
 import * as ft from "funtypes";
 
 export const UserCodec = ft.Intersect(
-  ft.ReadonlyObject({ id: ft.Number }),
-  ft.Object({ name: ft.Union(ft.String, ft.Undefined) }),
-});
+  ft.ReadonlyObject({
+    id: ft.Number,
+  }),
+  ft.Object({
+    name: ft.Union(ft.String, ft.Undefined),
+  }),
+);
 // => ft.Codec<{ readonly id: number; name: string | undefined }>
 
 export type User = ft.Static<typeof UserCodec>;
@@ -119,7 +124,7 @@ export type User = ft.Static<typeof UserCodec>;
 
 assert.deepEqual(
   ft.showType(UserCodec),
-  "{ readonly id: number; name: string | undefined }"
+  "{ readonly id: number; name: string | undefined }",
 );
 ```
 
@@ -136,7 +141,7 @@ export const UserCodec = ft.Intersect(
   }),
   ft.Partial({
     name: ft.Union(ft.String, ft.Undefined),
-  })
+  }),
 );
 // => ft.Codec<{ id: number; name?: string }>
 
@@ -145,9 +150,8 @@ export type User = ft.Static<typeof UserCodec>;
 
 assert.deepEqual(
   ft.showType(UserCodec),
-  "{ id: number; name?: string }"
+  "{ id: number; name?: string }",
 );
-
 
 // ✅ Valid object with correct keys
 assert.deepEqual(
@@ -161,7 +165,8 @@ assert.deepEqual(
   },
 );
 
-// ✅ Missing properties that were "Partial" are ignored.
+// ✅ Missing properties that were
+//    "Partial" are ignored.
 assert.deepEqual(
   UserCodec.parse({
     id: 1,

@@ -12,7 +12,7 @@ For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from 'funtypes-schemas';
+import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
@@ -26,23 +26,29 @@ assert.deepEqual(
   UserCodec.test({
     id: 1,
     name: "Forbes Lindesay",
-    dateOfBirth: new Date("1970-01-01T00:00:00.000Z")
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
   }),
   true,
 );
 
-// 🚨 Invalid: id should be a number, but here we've
+// 🚨 Invalid: id should be a
+//   number, but here we've
 //    passed a string instead.
 assert.deepEqual(
   UserCodec.test({
     id: "42",
     name: "Forbes Lindesay",
-    dateOfBirth: new Date("1970-01-01T00:00:00.000Z")
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
   }),
   false,
 );
 
-// 🚨 Invalid: dateOfBirth is a string, which would
+// 🚨 Invalid: dateOfBirth is a
+//   string, which would
 //    be ok if the value was serialized, but the
 //    Codec.assert function tests if the value
 //    matches the **parsed** schema
@@ -50,7 +56,7 @@ assert.deepEqual(
   UserCodec.test({
     id: 1,
     name: "Forbes Lindesay",
-    dateOfBirth: "1970-01-01T00:00:00.000Z"
+    dateOfBirth: "1970-01-01T00:00:00.000Z",
   }),
   false,
 );
@@ -71,21 +77,22 @@ function safelyGetUserName(user: unknown) {
   }
 }
 
-// ✅ Valid so no error is thrown and the name is returned
+// ✅ Valid so no error is thrown and the name
+//    is returned
 assert.deepEqual(
-  safelyGetUserName(
-    {
-      id: 1,
-      name: "Forbes Lindesay",
-      dateOfBirth: new Date("1970-01-01T00:00:00.000Z")
-    }
-  ),
+  safelyGetUserName({
+    id: 1,
+    name: "Forbes Lindesay",
+    dateOfBirth: new Date(
+      "1970-01-01T00:00:00.000Z",
+    ),
+  }),
   "Forbes Lindesay",
 );
 
-// 🚨 Invalid: even though this object has a "name" prop,
-//    It is not a valid User object, so UserCodec.test
-//    will return false.
+// 🚨 Invalid: even though this object has a
+//    "name" prop, It is not a valid User object,
+//    so UserCodec.test will return false.
 assert.deepEqual(
   safelyGetUserName({
     name: "Forbes Lindesay",

@@ -22,13 +22,12 @@ export const UserSchema = ft.Intersect(
   ft.Object({
     id: ft.Number,
     name: ft.String,
-  })
+  }),
 );
 // => ft.Codec<{ version: number; id: number; name: string }>
 
 export type User = ft.Static<typeof UserSchema>;
 // => { version: number; id: number; name: string }
-
 
 // ✅ Valid instance of User:
 assert.deepEqual(
@@ -41,10 +40,11 @@ assert.deepEqual(
     version: 1,
     id: 42,
     name: "Forbes Lindesay",
-  }
+  },
 );
 
-// 🚨 Missing `version` part of the intersection
+// 🚨 Missing `version` part of the
+//   intersection
 assert.throws(() => {
   UserSchema.parse({
     id: 42,
@@ -52,7 +52,8 @@ assert.throws(() => {
   });
 });
 
-// 🚨 Musing user parts of the intersection
+// 🚨 Musing user parts of the
+//   intersection
 assert.throws(() => {
   UserSchema.parse({
     version: 1,
@@ -67,16 +68,25 @@ You can also intersect "constraints" along with the underlying types.
 ```ts
 import * as ft from "funtypes";
 
-const MinimumValue = (min: number) => ft.Number.withConstraint(
-  value => value >= min || `Expected number to be at least ${min}`,
-  { name: `Minimum<${min}>` }
-);
-const MaximumValue = (max: number) => ft.Number.withConstraint(
-  value => value <= max || `Expected number to be at most ${max}`,
-  { name: `Maximum<${max}>` }
-);
+const MinimumValue = (min: number) =>
+  ft.Number.withConstraint(
+    (value) =>
+      value >= min ||
+      `Expected number to be at least ${min}`,
+    { name: `Minimum<${min}>` },
+  );
+const MaximumValue = (max: number) =>
+  ft.Number.withConstraint(
+    (value) =>
+      value <= max ||
+      `Expected number to be at most ${max}`,
+    { name: `Maximum<${max}>` },
+  );
 
-const MyRangeCodec = ft.Intersect(MinimumValue(1), MaximumValue(4));
+const MyRangeCodec = ft.Intersect(
+  MinimumValue(1),
+  MaximumValue(4),
+);
 
 // ✅ Valid for both constraints
 assert.deepEqual(MyRangeCodec.parse(3), 3);

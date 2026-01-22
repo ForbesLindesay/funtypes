@@ -18,7 +18,7 @@ export function Fence({
     >
       {({ className, style, tokens, getTokenProps }) => (
         <pre className={className} style={style}>
-          <code>
+          <code className="text-xs md:text-sm">
             {tokens.map((line, lineIndex) => (
               <Fragment key={lineIndex}>
                 {line

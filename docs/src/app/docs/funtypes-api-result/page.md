@@ -29,17 +29,20 @@ export type Failure = {
   success: false;
 
   /**
-   * A short message indicating the reason validation failed.
+   * A short message indicating the
+   * reason validation failed.
    */
   message: string;
 
   /**
-   * A key indicating the location at which validation failed.
+   * A key indicating the location at
+   * which validation failed.
    */
   key?: string;
 
   /**
-   * A nested structure containing detail on the reason for the
+   * A nested structure containing
+   * detail on the reason for the
    * error.
    */
   fullError?: FullError;

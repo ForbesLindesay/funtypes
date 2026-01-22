@@ -10,7 +10,7 @@ To use funtypes, you first construct a codec. For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from 'funtypes-schemas';
+import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
@@ -83,7 +83,9 @@ export interface Codec<TParsed> {
    * Add an arbitrary constraint function to a codec, and
    * optionally change its name and/or its static type.
    */
-  withConstraint<TConstrained extends TParsed = TParsed>(
+  withConstraint<
+    TConstrained extends TParsed = TParsed,
+  >(
     constraint: (x: TParsed) => boolean | string,
     options?: { name?: string },
   ): Codec<TConstrained>;
@@ -103,7 +105,9 @@ export interface Codec<TParsed> {
    * Apply conversion functions when parsing/serializing
    * this value.
    */
-  withParser<T>(value: ParsedValueConfig<TParsed, T>): Codec<T>;
+  withParser<T>(
+    value: ParsedValueConfig<TParsed, T>,
+  ): Codec<T>;
 
   introspection: RuntypeIntrospection;
 }
