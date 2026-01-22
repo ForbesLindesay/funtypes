@@ -342,12 +342,8 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
         return result.success ? undefined : result;
       },
       _fields: mode => fields[mode](),
-      _showType(needsParens) {
-        return parenthesize(
-          `${flatAlternatives.map(v => showType(v, true)).join(' | ')}`,
-          needsParens,
-        );
-      },
+      _showType: needsParens =>
+        parenthesize(`${flatAlternatives.map(v => showType(v, true)).join(' | ')}`, needsParens),
       _asMutable: mapper => Union(...flatAlternatives.map(mapper)),
       _asReadonly: mapper => Union(...flatAlternatives.map(mapper)),
     },

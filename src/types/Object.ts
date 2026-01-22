@@ -45,7 +45,7 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
               let validated = innerValidate(
                 fields[key],
                 value,
-                sealed && sealed.deep ? { deep: true } : false,
+                sealed && sealed._deep ? { _deep: true } : false,
               );
               if (!validated.success) {
                 if (!fullError) {
@@ -65,7 +65,7 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
           }
           if (!firstError && sealed) {
             for (const key of Object.keys(x)) {
-              if (!fieldNames.has(key) && !sealed.keysFromIntersect?.has(key)) {
+              if (!fieldNames.has(key) && !sealed._keysFromIntersect?.has(key)) {
                 const message = `Unexpected property: ${key}`;
                 if (!fullError) {
                   fullError = unableToAssign(x, runtype);

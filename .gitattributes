@@ -2,7 +2,7 @@
 * text=auto
 
 # TypeScript files will always have LF line endings on checkout,
-# so that running 'yarn format' on Windows will not need to change
+# so that running 'npm run format' on Windows will not need to change
 # line endings from CRLF to LF causing git to report modified files
 # with no code changes.
 *.ts text eol=lf

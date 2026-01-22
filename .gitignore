@@ -14,3 +14,5 @@ npm-debug.log*
 .size-snapshot.json
 funtypes-0.0.0.tgz
 test-output/
+/docs/.next
+/docs/out

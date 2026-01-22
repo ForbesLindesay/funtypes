@@ -17,8 +17,8 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: 24.x
-      - run: yarn install --frozen-lockfile
-      - run: yarn format
+      - run: npm install --frozen-lockfile
+      - run: npm run format
 
   test:
     runs-on: ubuntu-latest
@@ -33,10 +33,10 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: yarn install --frozen-lockfile
-      # - run: yarn add -D typescript@${{ matrix.typescript-version }}
-      - run: yarn build
-      - run: yarn test
+      - run: npm install --frozen-lockfile
+      # - run: npm add -D typescript@${{ matrix.typescript-version }}
+      - run: npm run build
+      - run: npm run test
       - name: Coveralls Parallel
         uses: coverallsapp/github-action@master
         with:

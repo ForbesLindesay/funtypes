@@ -112,7 +112,7 @@ export function Intersect<const TIntersectees extends readonly Codec<any>[]>(
           ? (targetType: Codec<any>): SealedState => {
               const i = allFieldInfo[mode]().intersecteesWithOtherFields.get(targetType);
               if (i === undefined) return false;
-              else return { keysFromIntersect: i, deep: sealed.deep };
+              else return { _keysFromIntersect: i, _deep: sealed._deep };
             }
           : (_i: Codec<any>): SealedState => false;
         if (Array.isArray(value)) {

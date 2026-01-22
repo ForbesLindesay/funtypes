@@ -1,20 +1,10 @@
-import type * as t from '.';
 import type { Result, Failure } from './result';
 
 import { ValidationError } from './errors';
-import { failure, success } from './result';
+import { success } from './result';
 import { RuntypeIntrospection } from './introspection';
-import { ParsedValueConfig } from './types/ParsedValue';
-
-// Importing these directly creates a cycle
-interface Helpers {
-  readonly Constraint: typeof t.Constraint;
-  readonly ParsedValue: typeof t.ParsedValue;
-}
-let helpers: Helpers;
-export function provideHelpers(h: Helpers) {
-  helpers = h;
-}
+import { ParsedValue, ParsedValueConfig } from './types/ParsedValue';
+import { Constraint } from './types/constraint';
 
 export type InnerValidateHelper = <T>(runtype: Runtype<T>, value: unknown) => Result<T>;
 declare const internalSymbol: unique symbol;
@@ -35,11 +25,12 @@ export function getInternal<T>(value: Runtype<T>): InternalValidation<T> {
   return value[internal];
 }
 
-export type ResultWithCycle<T> = (Result<T> & { cycle?: false }) | Cycle<T>;
+export type ResultWithCycle<T> = (Result<T> & { _cycle?: undefined }) | Cycle<T>;
 
 export type SealedState =
-  | { readonly keysFromIntersect?: ReadonlySet<string>; readonly deep: boolean }
+  | { readonly _keysFromIntersect?: ReadonlySet<string>; readonly _deep: boolean }
   | false;
+
 export interface InternalValidation<TParsed> {
   /**
    * parse
@@ -157,7 +148,7 @@ export interface Runtype<TParsed = unknown> {
    * Validates the value conforms to this type, and performs
    * the `parse` action for any `ParsedValue` types.
    *
-   * Returns a `Result`, constaining the parsed value or
+   * Returns a `Result`, containing the parsed value or
    * error message. Does not throw!
    */
   safeParse(x: any): Result<TParsed>;
@@ -239,9 +230,12 @@ export interface ObjectCodec<TParsed> extends Codec<TParsed> {
 export type Static<A extends Runtype<any>> = A extends Runtype<infer T> ? T : unknown;
 
 export function create<T>(
-  internalImplementation: InternalValidation<T> | InternalValidation<T>['_parse'],
+  internalImplementation: InternalValidation<T>,
   introspection: RuntypeIntrospection,
 ): Codec<T> {
+  const safeParse = (x: any) => unwrapCycle(parseToPlaceholder(A, x, createVisitedState(), false));
+  const safeSerialize = (x: any) =>
+    unwrapCycle(serializeToPlaceholder(A, x, createVisitedState(), false));
   const A: Codec<T> = {
     introspection,
     assert(x: any): asserts x is T {
@@ -250,9 +244,18 @@ export function create<T>(
         throw new ValidationError(validated);
       }
     },
-    parse,
+    parse(x: any) {
+      const validated = safeParse(x);
+      if (!validated.success) {
+        throw new ValidationError(validated);
+      }
+      return validated.value;
+    },
     safeParse,
-    test,
+    test(x: any): x is T {
+      const validated = innerGuard(A, x, createGuardVisitedState(), false, false);
+      return validated === undefined;
+    },
     serialize(x: any) {
       const validated = safeSerialize(x);
       if (!validated.success) {
@@ -262,82 +265,26 @@ export function create<T>(
     },
     safeSerialize,
     toString: () => `Runtype<${showType(A)}>`,
-    withConstraint<TConstrained extends T = T>(
+    withConstraint: <TConstrained extends T = T>(
       constraint: (x: T) => boolean | string,
       options?: { name?: string },
-    ): Codec<TConstrained> {
-      return helpers.Constraint(A, constraint, options);
-    },
-    withGuard<TConstrained extends T>(
+    ) => Constraint<T, TConstrained>(A, constraint, options),
+    withGuard: <TConstrained extends T>(
       constraint: (x: T) => x is TConstrained,
       options?: { name?: string },
-    ): Codec<TConstrained> {
-      return helpers.Constraint<T, TConstrained>(A, constraint, options);
-    },
-    withParser<TParsedNew>(value: ParsedValueConfig<T, TParsedNew>): Codec<TParsedNew> {
-      return helpers.ParsedValue(A, value);
-    },
-    [internal]:
-      typeof internalImplementation === 'function'
-        ? { _parse: internalImplementation }
-        : internalImplementation,
+    ) => Constraint<T, TConstrained>(A, constraint, options),
+    withParser: <TParsedNew>(value: ParsedValueConfig<T, TParsedNew>) =>
+      ParsedValue<T, TParsedNew>(A, value),
+    [internal]: internalImplementation,
   };
 
   return A;
-
-  function safeParse(x: any) {
-    return innerValidate(A, x, createVisitedState(), false);
-  }
-  function safeSerialize(x: any) {
-    return innerSerialize(A, x, createVisitedState(), false);
-  }
-  function parse(x: any) {
-    const validated = safeParse(x);
-    if (!validated.success) {
-      throw new ValidationError(validated);
-    }
-    return validated.value;
-  }
-
-  function test(x: any): x is T {
-    const validated = innerGuard(A, x, createGuardVisitedState(), false, false);
-    return validated === undefined;
-  }
 }
 
 export interface Cycle<T> {
-  success: true;
-  cycle: true;
-  placeholder: Partial<T>;
-  unwrap: () => Result<T>;
-}
-
-function attemptMixin<T>(placeholder: any, value: T): Result<T> {
-  if (placeholder === value) {
-    return success(value);
-  }
-  if (Array.isArray(placeholder) && Array.isArray(value)) {
-    placeholder.splice(0, placeholder.length, ...value);
-    return success(placeholder as any);
-  }
-  if (
-    placeholder &&
-    typeof placeholder === 'object' &&
-    !Array.isArray(placeholder) &&
-    value &&
-    typeof value === 'object' &&
-    !Array.isArray(value)
-  ) {
-    Object.assign(placeholder, value);
-    return success(placeholder);
-  }
-  return failure(
-    `Cannot convert a value of type "${
-      Array.isArray(placeholder) ? 'Array' : typeof placeholder
-    }" into a value of type "${
-      value === null ? 'null' : Array.isArray(value) ? 'Array' : typeof value
-    }" when it contains cycles.`,
-  );
+  _cycle: true;
+  _placeholder: Partial<T>;
+  _unwrap: () => Result<T>;
 }
 
 /**
@@ -354,131 +301,48 @@ export function unwrapRuntype(t: Runtype, mode: 'p' | 's' | 't'): Runtype {
 
 export function createValidationPlaceholder<T>(
   placeholder: T,
-  fn: (placeholder: T) => Failure | undefined,
+  populate: (placeholder: T) => Failure | undefined,
 ): Cycle<T> {
-  return innerMapValidationPlaceholder(placeholder, () => fn(placeholder) || success(placeholder));
-}
-
-export function mapValidationPlaceholder<T, S>(
-  source: ResultWithCycle<T>,
-  fn: (placeholder: T) => Result<S>,
-  extraGuard?: Runtype<S>,
-): ResultWithCycle<S> {
-  if (!source.success) return source;
-  if (!source.cycle) {
-    const result = fn(source.value);
-    return (
-      (result.success &&
-        extraGuard &&
-        innerGuard(extraGuard, result.value, createGuardVisitedState(), false, true)) ||
-      result
-    );
-  }
-
-  return innerMapValidationPlaceholder(
-    Array.isArray(source.placeholder) ? [...source.placeholder] : { ...source.placeholder },
-    () => source.unwrap(),
-    fn,
-    extraGuard,
-  );
-}
-
-function innerMapValidationPlaceholder(
-  placeholder: any,
-  populate: () => Result<any>,
-  fn?: (placeholder: any) => Result<any>,
-  extraGuard?: Runtype<any>,
-): Cycle<any> {
-  let hasCycle = false;
-  let cache: Result<any> | undefined;
-  const cycle: Cycle<any> = {
-    success: true,
-    cycle: true,
-    placeholder,
-    unwrap: () => {
-      if (cache) {
-        hasCycle = true;
-        return cache;
+  let unwrapping = false;
+  let cache: Result<T> = success(placeholder);
+  const cycle: Cycle<T> = {
+    _cycle: true,
+    _placeholder: placeholder,
+    _unwrap: () => {
+      if (!unwrapping) {
+        unwrapping = true;
+        cache = populate(placeholder) ?? cache;
       }
-      cache = success(placeholder);
-
-      const sourceResult = populate();
-      const result = sourceResult.success && fn ? fn(sourceResult.value) : sourceResult;
-      if (!result.success) return (cache = result);
-      if (hasCycle) {
-        const unwrapResult = attemptMixin(cache.value, result.value);
-        const guardFailure =
-          unwrapResult.success &&
-          extraGuard &&
-          innerGuard(extraGuard, unwrapResult.value, createGuardVisitedState(), false, true);
-        cache = guardFailure || unwrapResult;
-      } else {
-        const guardFailure =
-          extraGuard &&
-          innerGuard(extraGuard, result.value, createGuardVisitedState(), false, true);
-        cache = guardFailure || result;
-      }
-
-      if (cache.success) {
-        cycle.placeholder = cache.value;
-      }
-
       return cache;
     },
   };
   return cycle;
 }
 
-declare const OpaqueVisitedState: unique symbol;
-export type OpaqueVisitedState = typeof OpaqueVisitedState;
-type VisitedState = Map<Runtype<unknown>, Map<any, Cycle<any>>>;
-
-function unwrapVisitedState(o: OpaqueVisitedState): VisitedState {
-  return o as any;
-}
-function wrapVisitedState(o: VisitedState): OpaqueVisitedState {
-  return o as any;
+type VisitedState = Map<Runtype<unknown>, Map<any, Cycle<any>>> & {
+  readonly __type__: 'VisitedState';
+};
+export function createVisitedState(): VisitedState {
+  return new Map() as VisitedState;
 }
 
-export function createVisitedState(): OpaqueVisitedState {
-  return wrapVisitedState(new Map());
+type GuardVisitedState = Map<Runtype<unknown>, Set<any>> & {
+  readonly __type__: 'GuardVisitedState';
+};
+export function createGuardVisitedState(): GuardVisitedState {
+  return new Map() as GuardVisitedState;
 }
 
-declare const OpaqueGuardVisitedState: unique symbol;
-export type OpaqueGuardVisitedState = typeof OpaqueGuardVisitedState;
-type GuardVisitedState = Map<Runtype<unknown>, Set<any>>;
-
-function unwrapGuardVisitedState(o: OpaqueGuardVisitedState): GuardVisitedState {
-  return o as any;
-}
-function wrapGuardVisitedState(o: GuardVisitedState): OpaqueGuardVisitedState {
-  return o as any;
+function unwrapCycle<T>(result: ResultWithCycle<T>): Result<T> {
+  return result._cycle ? result._unwrap() : result;
 }
 
-export function createGuardVisitedState(): OpaqueGuardVisitedState {
-  return wrapGuardVisitedState(new Map());
-}
-
-export function innerValidate<T>(
+function parseToPlaceholder<T>(
   targetType: Runtype<T>,
   value: any,
-  $visited: OpaqueVisitedState,
-  sealed: SealedState,
-): Result<T> {
-  const result = innerValidateToPlaceholder(targetType, value, $visited, sealed);
-  if (result.cycle) {
-    return result.unwrap();
-  }
-  return result;
-}
-
-function innerValidateToPlaceholder<T>(
-  targetType: Runtype<T>,
-  value: any,
-  $visited: OpaqueVisitedState,
+  visited: VisitedState,
   sealed: SealedState,
 ): ResultWithCycle<T> {
-  const visited = unwrapVisitedState($visited);
   const validator = targetType[internal];
   const cached = visited.get(targetType)?.get(value);
   if (cached !== undefined) {
@@ -486,37 +350,24 @@ function innerValidateToPlaceholder<T>(
   }
   const result = validator._parse(
     value,
-    (t, v, s) => innerValidate(t, v, $visited, s ?? sealed),
-    (t, v, s) => innerValidateToPlaceholder(t, v, $visited, s ?? sealed),
+    (t, v, s) => unwrapCycle(parseToPlaceholder(t, v, visited, s ?? sealed)),
+    (t, v, s) => parseToPlaceholder(t, v, visited, s ?? sealed),
     'p',
     sealed,
   );
-  if (result.cycle) {
+  if (result._cycle) {
     visited.set(targetType, (visited.get(targetType) || new Map()).set(value, result));
     return result;
   }
   return result;
 }
 
-export function innerSerialize<T>(
-  targetType: Runtype<T>,
-  value: any,
-  $visited: OpaqueVisitedState,
-  sealed: SealedState,
-): Result<T> {
-  const result = innerSerializeToPlaceholder(targetType, value, $visited, sealed);
-  if (result.cycle) {
-    return result.unwrap();
-  }
-  return result;
-}
-function innerSerializeToPlaceholder(
+function serializeToPlaceholder(
   targetType: Runtype,
   value: any,
-  $visited: OpaqueVisitedState,
+  visited: VisitedState,
   sealed: SealedState,
 ): ResultWithCycle<any> {
-  const visited = unwrapVisitedState($visited);
   const validator = targetType[internal];
   const cached = visited.get(targetType)?.get(value);
   if (cached !== undefined) {
@@ -525,12 +376,12 @@ function innerSerializeToPlaceholder(
   const fn: typeof validator._serialize = validator._serialize || validator._parse;
   let result = fn(
     value,
-    (t, v, s) => innerSerialize(t, v, $visited, s ?? sealed),
-    (t, v, s) => innerSerializeToPlaceholder(t, v, $visited, s ?? sealed),
+    (t, v, s) => unwrapCycle(serializeToPlaceholder(t, v, visited, s ?? sealed)),
+    (t, v, s) => serializeToPlaceholder(t, v, visited, s ?? sealed),
     's',
     sealed,
   );
-  if (result.cycle) {
+  if (result._cycle) {
     visited.set(targetType, (visited.get(targetType) || new Map()).set(value, result));
     return result;
   }
@@ -540,11 +391,10 @@ function innerSerializeToPlaceholder(
 export function innerGuard(
   targetType: Runtype,
   value: any,
-  $visited: OpaqueGuardVisitedState,
+  visited: GuardVisitedState,
   sealed: SealedState,
   isOptionalTest: boolean,
 ): Failure | undefined {
-  const visited = unwrapGuardVisitedState($visited);
   const validator = targetType[internal];
   if (value && (typeof value === 'object' || typeof value === 'function')) {
     const cached = visited.get(targetType)?.has(value);
@@ -554,21 +404,21 @@ export function innerGuard(
   if (validator._test) {
     return validator._test(
       value,
-      (t, v, s) => innerGuard(t, v, $visited, s ?? sealed, isOptionalTest),
+      (t, v, s) => innerGuard(t, v, visited, s ?? sealed, isOptionalTest),
       sealed,
       isOptionalTest,
     );
   }
-  let result = validator._parse(
-    value,
-    (t, v, s) => innerGuard(t, v, $visited, s ?? sealed, isOptionalTest) || success(v as any),
-    (t, v, s) => innerGuard(t, v, $visited, s ?? sealed, isOptionalTest) || success(v as any),
-    't',
-    sealed,
+  const result = unwrapCycle(
+    validator._parse(
+      value,
+      (t, v, s) => innerGuard(t, v, visited, s ?? sealed, isOptionalTest) || success(v as any),
+      (t, v, s) => innerGuard(t, v, visited, s ?? sealed, isOptionalTest) || success(v as any),
+      't',
+      sealed,
+    ),
   );
-  if (result.cycle) result = result.unwrap();
-  if (result.success) return undefined;
-  else return result;
+  if (!result.success) return result;
 }
 
 /**
@@ -664,7 +514,4 @@ export function showValue(
     default:
       return typeof value;
   }
-}
-export function showValueNonString(value: unknown): string {
-  return `${showValue(value)}${typeof value === 'string' ? ` (i.e. a string literal)` : ``}`;
 }

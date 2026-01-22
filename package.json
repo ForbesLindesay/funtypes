@@ -34,10 +34,11 @@
     }
   },
   "scripts": {
-    "build": "tsc --noEmit && rollup -c && yarn api-extractor run --local && node scripts/finalize-build.js",
+    "build": "tsc --noEmit && rollup -c && api-extractor run --local && node scripts/finalize-build.js && npm run minify",
     "format": "node scripts/format.js",
     "test": "rollup -c && jest $([ \"$CI\" = true ] && echo --coverage || echo --watch)",
-    "typecheck": "tsc --noEmit --watch"
+    "typecheck": "tsc --noEmit --watch",
+    "minify": "terser ./lib/index.js --module --ecma 2020 --keep-classnames --keep-fnames --compress 'passes=20,inline=0,pure_getters=true,hoist_funs=true,unsafe_arrows=true,unsafe_comps=true,unsafe_math=true,unsafe_methods=true' --mangle --output ./lib/index.js && prettier --ignore-path '' --write lib/index.js"
   },
   "author": "Thomas Crockett",
   "license": "MIT",
@@ -51,6 +52,7 @@
     "rollup-plugin-prettier": "^4.1.2",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.27.2",
+    "terser": "^5.46.0",
     "ts-jest": "^29.4.6",
     "type-assertions": "^1.1.0",
     "typescript": "^5.9.3"
@@ -80,5 +82,5 @@
   "publishConfig": {
     "provenance": true
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "npm@11.7.0+sha512.c22099a6fff8d5b2286c2a09df5352b4858a7c0c716320f58989d60ad8b29ecf2ce6fdfe97ccb41c23ffb1272e1fa079f868487dd6b81d02a2a9e199c095a117"
 }

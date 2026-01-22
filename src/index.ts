@@ -1,9 +1,7 @@
-import { provideHelpers } from './runtype';
-import { Constraint } from './types/constraint';
-import { ParsedValue } from './types/ParsedValue';
-
-export { assertType } from './assertType';
+// Due to cycles, "never" must be imported before Runtype is imported
+import './types/never';
 export type { Runtype, Codec, ObjectCodec, Static } from './runtype';
+export { assertType } from './assertType';
 export type { Success, Failure, Result } from './result';
 export { showError } from './result';
 export { ValidationError } from './errors';
@@ -23,8 +21,9 @@ export {
 export { Record, Record as MutableRecord, ReadonlyRecord } from './types/Record';
 export { Tuple, Tuple as MutableTuple, ReadonlyTuple } from './types/tuple';
 
-export { Constraint, Guard } from './types/constraint';
+export { Constraint } from './types/constraint';
 export { Enum } from './types/Enum';
+export { Guard } from './types/Guard';
 export { InstanceOf } from './types/instanceof';
 export { Intersect } from './types/intersect';
 export { KeyOf } from './types/KeyOf';
@@ -74,8 +73,3 @@ export type {
   SymbolIntrospection,
   BigIntIntrospection,
 } from './introspection';
-
-provideHelpers({
-  Constraint,
-  ParsedValue,
-});

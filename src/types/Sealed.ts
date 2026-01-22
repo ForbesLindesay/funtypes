@@ -10,7 +10,7 @@ export function Sealed<T>(
     {
       _parse: (value, _innerValidate, innerParseToPlaceholder) => {
         return innerParseToPlaceholder<T>(underlying, value, {
-          deep,
+          _deep: deep,
         });
       },
       _underlyingType: () => underlying,

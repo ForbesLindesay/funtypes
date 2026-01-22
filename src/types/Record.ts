@@ -90,7 +90,7 @@ function RecordCore<K extends string | number, V>(
             const validated = innerValidate(
               value,
               (x as any)[k],
-              sealed && sealed.deep ? { deep: true } : false,
+              sealed && sealed._deep ? { _deep: true } : false,
             );
             if (!validated.success) {
               return failure(validated.message, {

@@ -1,6 +1,5 @@
-import { failure, success, unableToAssign } from '../result';
+import { failure, Result, unableToAssign } from '../result';
 import { create, Codec, assertRuntype, showType, showValue } from '../runtype';
-import { Unknown } from './unknown';
 
 export function Constraint<TUnderlying, TConstrained extends TUnderlying = TUnderlying>(
   underlying: Codec<TUnderlying>,
@@ -11,29 +10,25 @@ export function Constraint<TUnderlying, TConstrained extends TUnderlying = TUnde
   const runtype: Codec<TConstrained> = create<TConstrained>(
     {
       _parse(value, innerValidate, _, mode) {
-        const name = options && options.name;
         const validated = innerValidate(underlying, value);
 
-        if (!validated.success) {
-          return validated;
+        if (validated.success) {
+          const result = constraint(mode === 'p' ? validated.value : value);
+          if (result !== true) {
+            const message =
+              typeof result === 'string'
+                ? result
+                : `${showValue(value)} failed ${options?.name || 'constraint'} check`;
+            return failure(message, {
+              fullError: unableToAssign(value, runtype, message),
+            });
+          }
         }
-
-        const result = constraint(mode === 'p' ? validated.value : value);
-        if (!result || typeof result === 'string') {
-          const message =
-            typeof result === 'string'
-              ? result
-              : `${showValue(value)} failed ${name || 'constraint'} check`;
-          return failure(message, {
-            fullError: unableToAssign(value, runtype, message),
-          });
-        }
-        return success(validated.value as TConstrained);
+        return validated as Result<TConstrained>;
       },
       _underlyingType: () => underlying,
-      _showType(needsParens) {
-        return options?.name || `WithConstraint<${showType(underlying, needsParens)}>`;
-      },
+      _showType: needsParens =>
+        options?.name || `WithConstraint<${showType(underlying, needsParens)}>`,
     },
     {
       tag: 'constraint',
@@ -43,6 +38,3 @@ export function Constraint<TUnderlying, TConstrained extends TUnderlying = TUnde
   );
   return runtype;
 }
-
-export const Guard = <T>(test: (x: unknown) => x is T, options?: { name?: string }): Codec<T> =>
-  Constraint(Unknown, test, options);

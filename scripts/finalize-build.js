@@ -102,6 +102,11 @@ const ALLOWED_FILES = new Set(
 );
 
 const replacements = {
+  _placeholder: 'a',
+  _unwrap: 'b',
+  _cycle: 'c',
+  _deep: 'd',
+  _keysFromIntersect: 'e',
   _parse: 'p',
   _test: 't',
   _serialize: 's',
@@ -114,6 +119,9 @@ const replacements = {
   _omit: 'x',
   _partial: 'z',
 };
+if (Object.values(replacements).length !== new Set(Object.values(replacements)).size) {
+  throw new Error(`Replacements contain duplicates`);
+}
 readdirSync(`lib`).forEach(f => {
   if (!ALLOWED_FILES.has(f)) {
     rmSync(`lib/${f}`, { recursive: true, force: true });

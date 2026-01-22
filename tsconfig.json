@@ -4,8 +4,8 @@
     "isolatedModules": true,
     "module": "ES2015",
     "moduleResolution": "node",
-    "target": "ES2019",
-    "lib": ["es2019", "dom"],
+    "target": "ES2020",
+    "lib": ["es2020", "dom"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -15,5 +15,5 @@
     "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true
   },
-  "exclude": ["./lib/**/*", "./examples/**/*", "./test-output/**/*"]
+  "exclude": ["docs", "./lib/**/*", "./examples/**/*", "./test-output/**/*"]
 }
