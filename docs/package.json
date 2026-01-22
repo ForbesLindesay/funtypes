@@ -2,6 +2,7 @@
   "name": "tailwind-plus-syntax",
   "version": "0.1.0",
   "private": true,
+  "@rollingversions/ignore": true,
   "scripts": {
     "dev": "next dev",
     "build": "NODE_ENV=production next build",
