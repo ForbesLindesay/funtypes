@@ -9,7 +9,10 @@ process.on('unhandledRejection', err => {
 
 import { spawn } from 'child_process';
 
-const command = [process.env.CI ? '--list-different' : '--write', './**/*.{ts,tsx,js,json,css}'];
+const command = [
+  process.env.CI ? '--list-different' : '--write',
+  './src/**/*.{ts,tsx,js,json,css}',
+];
 
 spawn(`prettier`, command, { stdio: 'inherit' }).on('exit', exitCode => {
   if (exitCode) {
