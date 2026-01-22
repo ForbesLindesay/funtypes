@@ -13,38 +13,38 @@ Use `ft.Tuple` to validate an unknown value is a tuple, i.e. an array of a speci
 ```ts
 import * as ft from "funtypes";
 
-export const MyTupleSchema = ft.Tuple(
+export const MyTupleCodec = ft.Tuple(
   ft.Number,
   ft.String,
 );
 // => ft.Codec<[number, string]>
 export type MyTuple = ft.Static<
-  typeof MyTupleSchema
+  typeof MyTupleCodec
 >;
 // => [number, string]
 
 // ✅ Valid tuple
 assert.deepEqual(
-  MyTupleSchema.parse([42, "42"]),
+  MyTupleCodec.parse([42, "42"]),
   [42, "42"],
 );
 
 // 🚨 Tuple is too short
-assert.throws(() => MyTupleSchema.parse([42]));
+assert.throws(() => MyTupleCodec.parse([42]));
 
 // 🚨 Tuple is too long
 assert.throws(() =>
-  MyTupleSchema.parse([42, "42", "Forty Two"]),
+  MyTupleCodec.parse([42, "42", "Forty Two"]),
 );
 
 // 🚨 Tuple has the wrong types
 assert.throws(() =>
-  MyTupleSchema.parse(["42", 42]),
+  MyTupleCodec.parse(["42", 42]),
 );
 
 // 🚨 Not an array
 assert.throws(() =>
-  MyTupleSchema.parse({ 0: 42, 1: "42" }),
+  MyTupleCodec.parse({ 0: 42, 1: "42" }),
 );
 ```
 
@@ -55,37 +55,37 @@ The `ft.ReadonlyTuple` type has the same runtime behaviour as `ft.Tuple`, but th
 ```ts
 import * as ft from "funtypes";
 
-export const MyTupleSchema = ft.ReadonlyTuple(
+export const MyTupleCodec = ft.ReadonlyTuple(
   ft.Number,
   ft.String,
 );
 // => ft.Codec<readonly [number, string]>
 export type MyTuple = ft.Static<
-  typeof MyTupleSchema
+  typeof MyTupleCodec
 >;
 // => readonly [number, string]
 
 // ✅ Valid tuple
 assert.deepEqual(
-  MyTupleSchema.parse([42, "42"]),
+  MyTupleCodec.parse([42, "42"]),
   [42, "42"],
 );
 
 // 🚨 Tuple is too short
-assert.throws(() => MyTupleSchema.parse([42]));
+assert.throws(() => MyTupleCodec.parse([42]));
 
 // 🚨 Tuple is too long
 assert.throws(() =>
-  MyTupleSchema.parse([42, "42", "Forty Two"]),
+  MyTupleCodec.parse([42, "42", "Forty Two"]),
 );
 
 // 🚨 Tuple has the wrong types
 assert.throws(() =>
-  MyTupleSchema.parse(["42", 42]),
+  MyTupleCodec.parse(["42", 42]),
 );
 
 // 🚨 Not an array
 assert.throws(() =>
-  MyTupleSchema.parse({ 0: 42, 1: "42" }),
+  MyTupleCodec.parse({ 0: 42, 1: "42" }),
 );
 ```

@@ -13,33 +13,33 @@ Use `ft.Literal` to validate an unknown value is exactly equal to a specific val
 ```ts
 import * as ft from "funtypes";
 
-export const ObjectKindSchema = ft.Union(
+export const ObjectKindCodec = ft.Union(
   ft.Literal("USER"),
   ft.Literal("POST"),
 );
 // => ft.Codec<"USER" | "POST">
 
 export type ObjectKind = ft.Static<
-  typeof ObjectKindSchema
+  typeof ObjectKindCodec
 >;
 // => "USER" | "POST"
 
 // ✅ Valid value
 assert.deepEqual(
-  ObjectKindSchema.parse("USER"),
+  ObjectKindCodec.parse("USER"),
   "USER",
 );
 assert.deepEqual(
-  ObjectKindSchema.parse("POST"),
+  ObjectKindCodec.parse("POST"),
   "POST",
 );
 
 // 🚨 Invalid value
-assert.throws(() => ObjectKindSchema.parse(42));
+assert.throws(() => ObjectKindCodec.parse(42));
 
 // 🚨 Invalid value
 assert.throws(() =>
-  ObjectKindSchema.parse("SOME_OTHER_STRING"),
+  ObjectKindCodec.parse("SOME_OTHER_STRING"),
 );
 ```
 

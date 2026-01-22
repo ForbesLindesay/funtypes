@@ -128,7 +128,7 @@ Funtypes codecs are not just for validating, they can also simultaneously handle
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-schemas";
+import * as s from "funtypes-Codecs";
 
 const PostCodec = ft.Object({
   id: ft.Number,
@@ -165,7 +165,7 @@ assert.deepEqual(
 
 ## Handling Data Migration
 
-Using Codecs that parse the value, not just validate it, you can create a Funtypes Codec that automatically migrates data from an older schema:
+Using Codecs that parse the value, not just validate it, you can create a Funtypes Codec that automatically migrates data from an older Codec:
 
 ```ts
 import * as ft from "funtypes";

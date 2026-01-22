@@ -19,7 +19,7 @@ export enum MyEnum {
   A = 1,
   B = 2,
 }
-export const MyEnumSchema = ft.Enum(
+export const MyEnumCodec = ft.Enum(
   "MyEnum",
   MyEnum,
 );
@@ -27,19 +27,19 @@ export const MyEnumSchema = ft.Enum(
 
 // ✅ Valid reference to enum value
 assert.deepEqual(
-  MyEnumSchema.parse(MyEnum.A),
+  MyEnumCodec.parse(MyEnum.A),
   MyEnum.A,
 );
 
 // ✅ Valid raw value
 //    (equivalent at runtime)
-assert.deepEqual(MyEnumSchema.parse(1), MyEnum.A);
+assert.deepEqual(MyEnumCodec.parse(1), MyEnum.A);
 
 // 🚨 Invalid value:
-assert.throws(() => MyEnumSchema.parse(3));
+assert.throws(() => MyEnumCodec.parse(3));
 
 // 🚨 Invalid value:
-assert.throws(() => MyEnumSchema.parse("A"));
+assert.throws(() => MyEnumCodec.parse("A"));
 ```
 
 ## String Enum
@@ -51,7 +51,7 @@ export enum MyEnum {
   A = "letter_a",
   B = "letter_b",
 }
-export const MyEnumSchema = ft.Enum(
+export const MyEnumCodec = ft.Enum(
   "MyEnum",
   MyEnum,
 );
@@ -59,20 +59,20 @@ export const MyEnumSchema = ft.Enum(
 
 // ✅ Valid reference to enum value
 assert.deepEqual(
-  MyEnumSchema.parse(MyEnum.A),
+  MyEnumCodec.parse(MyEnum.A),
   MyEnum.A,
 );
 
 // ✅ Valid raw value
 //    (equivalent at runtime)
 assert.deepEqual(
-  MyEnumSchema.parse("letter_a"),
+  MyEnumCodec.parse("letter_a"),
   MyEnum.A,
 );
 
 // 🚨 Invalid value:
-assert.throws(() => MyEnumSchema.parse(1));
+assert.throws(() => MyEnumCodec.parse(1));
 
 // 🚨 Invalid value:
-assert.throws(() => MyEnumSchema.parse("A"));
+assert.throws(() => MyEnumCodec.parse("A"));
 ```

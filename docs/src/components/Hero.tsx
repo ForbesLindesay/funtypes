@@ -10,44 +10,30 @@ import blurIndigoImage from '@/images/blur-indigo.png'
 
 const codeLanguage = 'typescript'
 const code = `import * as ft from "funtypes"
+import * as s from "funtypes-schemas"
 
 export const UserSchema = ft.Object({
   id: ft.Number,
   name: ft.String,
-  email: ft.String,
+  profile: s.ParsedUrlString(),
 })
 
 export type User = ft.Static<typeof UserSchema>
-// => { id: number; name: string; email: string }
+// => { id: number; name: string; profile: URL }
 
 assert.deepEqual(
   UserSchema.parse({
     id: 42,
     name: "Forbes Lindesay",
-    email: "forbes@example.com",
+    profile: "https://funtypes.dev",
   }),
   {
     id: 42,
     name: "Forbes Lindesay",
-    email: "forbes@example.com",
+    profile: new URL("https://funtypes.dev"),
   },
 )
 `
-
-const tabs = [
-  { name: 'types.ts', isActive: true },
-  { name: 'package.json', isActive: false },
-]
-
-function TrafficLightsIcon(props: React.ComponentPropsWithoutRef<'svg'>) {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 42 10" fill="none" {...props}>
-      <circle cx="5" cy="5" r="4.5" />
-      <circle cx="21" cy="5" r="4.5" />
-      <circle cx="37" cy="5" r="4.5" />
-    </svg>
-  )
-}
 
 export function Hero() {
   return (
@@ -69,9 +55,8 @@ export function Hero() {
                 Runtime validation for TypeScript
               </p>
               <p className="mt-3 text-2xl tracking-tight text-slate-400">
-                Funtypes is a lightweight library for building runtime
-                validators and parsers for TypeScript types with the best
-                possible static type inference.
+                Funtypes validates and parses runtime data in TypeScript with
+                complete type safety.
               </p>
               <div className="mt-8 flex gap-4 md:justify-center lg:justify-start">
                 <Button href="https://rollingversions.com/ForbesLindesay/funtypes">
@@ -115,30 +100,7 @@ export function Hero() {
                 <div className="absolute -top-px right-11 left-20 h-px bg-linear-to-r from-sky-300/0 via-sky-300/70 to-sky-300/0" />
                 <div className="absolute right-20 -bottom-px left-11 h-px bg-linear-to-r from-blue-400/0 via-blue-400 to-blue-400/0" />
                 <div className="pt-4 pl-4">
-                  <TrafficLightsIcon className="h-2.5 w-auto stroke-slate-500/30" />
-                  <div className="mt-4 flex space-x-2 text-xs">
-                    {tabs.map((tab) => (
-                      <div
-                        key={tab.name}
-                        className={clsx(
-                          'flex h-6 rounded-full',
-                          tab.isActive
-                            ? 'bg-linear-to-r from-sky-400/30 via-sky-400 to-sky-400/30 p-px font-medium text-sky-300'
-                            : 'text-slate-500',
-                        )}
-                      >
-                        <div
-                          className={clsx(
-                            'flex items-center rounded-full px-2.5',
-                            tab.isActive && 'bg-slate-800',
-                          )}
-                        >
-                          {tab.name}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 flex items-start px-1 text-sm">
+                  <div className="flex items-start px-1 text-sm">
                     <div
                       aria-hidden="true"
                       className="border-r border-slate-300/5 pr-4 font-mono text-slate-600 select-none"

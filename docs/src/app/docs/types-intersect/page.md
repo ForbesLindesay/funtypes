@@ -13,12 +13,12 @@ Use `ft.Intersect` to validate an unknown value matches multiple codecs at the s
 ```ts
 import * as ft from "funtypes";
 
-const VersionedObjectSchema = ft.Object({
+const VersionedObjectCodec = ft.Object({
   version: ft.Number,
 });
 
-export const UserSchema = ft.Intersect(
-  VersionedObjectSchema,
+export const UserCodec = ft.Intersect(
+  VersionedObjectCodec,
   ft.Object({
     id: ft.Number,
     name: ft.String,
@@ -26,12 +26,12 @@ export const UserSchema = ft.Intersect(
 );
 // => ft.Codec<{ version: number; id: number; name: string }>
 
-export type User = ft.Static<typeof UserSchema>;
+export type User = ft.Static<typeof UserCodec>;
 // => { version: number; id: number; name: string }
 
 // ✅ Valid instance of User:
 assert.deepEqual(
-  UserSchema.parse({
+  UserCodec.parse({
     version: 1,
     id: 42,
     name: "Forbes Lindesay",
@@ -46,7 +46,7 @@ assert.deepEqual(
 // 🚨 Missing `version` part of the
 //   intersection
 assert.throws(() => {
-  UserSchema.parse({
+  UserCodec.parse({
     id: 42,
     name: "Forbes Lindesay",
   });
@@ -55,7 +55,7 @@ assert.throws(() => {
 // 🚨 Musing user parts of the
 //   intersection
 assert.throws(() => {
-  UserSchema.parse({
+  UserCodec.parse({
     version: 1,
   });
 });

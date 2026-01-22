@@ -34,11 +34,11 @@
     }
   },
   "scripts": {
-    "build": "tsc --noEmit && rollup -c && api-extractor run --local && node scripts/finalize-build.js",
+    "build": "tsc --noEmit && rollup -c && api-extractor run --local && node scripts/finalize-build.js && npm run minify",
     "format": "node scripts/format.js",
     "test": "rollup -c && jest $([ \"$CI\" = true ] && echo --coverage || echo --watch)",
     "typecheck": "tsc --noEmit --watch",
-    "minify": "terser ./lib/index.js --module --ecma 2020 --keep-classnames --keep-fnames --compress 'passes=20,inline=0,pure_getters=true,hoist_funs=true,unsafe_arrows=true,unsafe_comps=true,unsafe_math=true,unsafe_methods=true' --mangle --output ./lib/index.min.js && prettier --ignore-path '' --write lib/index.min.js"
+    "minify": "terser ./lib/index.js --module --ecma 2020 --keep-classnames --keep-fnames --compress 'passes=20,inline=0,pure_getters=true,hoist_funs=true,unsafe_arrows=true,unsafe_comps=true,unsafe_math=true,unsafe_methods=true' --mangle --output ./lib/index.js && prettier --ignore-path '' --write lib/index.js"
   },
   "author": "Thomas Crockett",
   "license": "MIT",

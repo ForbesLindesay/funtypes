@@ -54,9 +54,7 @@ function InternalArr<TElement>(element: Runtype<TElement>, isReadonly: boolean):
           return firstError;
         });
       },
-      _showType() {
-        return `${isReadonly ? 'readonly ' : ''}${showType(element, true)}[]`;
-      },
+      _showType: () => `${isReadonly ? 'readonly ' : ''}${showType(element, true)}[]`,
       _asMutable: () => InternalArr(element, false),
       _asReadonly: () => InternalArr(element, true),
     },

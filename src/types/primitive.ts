@@ -6,12 +6,14 @@ function createPrimitive<
   TValue,
 >(type: TType): Codec<TValue> {
   return create<TValue>(
-    value =>
-      typeof value === type
-        ? success<TValue>(value)
-        : failure(
-            `Expected ${type}, but was ${showValue(value)}${typeof value === 'string' ? ` (i.e. a string literal)` : ``}`,
-          ),
+    {
+      _parse: value =>
+        typeof value === type
+          ? success<TValue>(value)
+          : failure(
+              `Expected ${type}, but was ${showValue(value)}${typeof value === 'string' ? ` (i.e. a string literal)` : ``}`,
+            ),
+    },
     { tag: type },
   );
 }

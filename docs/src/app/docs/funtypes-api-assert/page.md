@@ -12,7 +12,7 @@ For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-schemas";
+import * as s from "funtypes-Codecs";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
@@ -45,7 +45,7 @@ assert.throws(() => {
 // 🚨 Invalid: dateOfBirth is a string, which
 //    would be ok if the value was serialized, but
 //    the Codec.assert function tests if the value
-//    matches the **parsed** schema
+//    matches the **parsed** Codec
 assert.throws(() => {
   UserCodec.assert({
     id: 1,

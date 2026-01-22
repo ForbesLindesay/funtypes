@@ -19,25 +19,25 @@ export class User {
     this.name = name;
   }
 }
-export const UserSchema = ft.InstanceOf(User);
+export const UserCodec = ft.InstanceOf(User);
 // => ft.Codec<User>
 
 // ✅ Valid instance of User:
 assert.deepEqual(
-  UserSchema.parse(new User("Forbes Lindesay")),
+  UserCodec.parse(new User("Forbes Lindesay")),
   new User("Forbes Lindesay"),
 );
 
 // 🚨 Correct shape, but not an instance
 //    of the class:
 assert.throws(() =>
-  UserSchema.parse({
+  UserCodec.parse({
     name: "Forbes Lindesay",
   }),
 );
 
 // 🚨 Invalid value:
-assert.throws(() => UserSchema.parse("A"));
+assert.throws(() => UserCodec.parse("A"));
 ```
 
 {% callout type="warning" title="InstanceOf can behave strangely if intersected with Object codecs" %}

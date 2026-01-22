@@ -13,27 +13,27 @@ Use `ft.Array` to validate an unknown value is equal to an array of values match
 ```ts
 import * as ft from "funtypes";
 
-export const MyArraySchema = ft.Array(ft.Number);
+export const MyArrayCodec = ft.Array(ft.Number);
 // => ft.Codec<number[]>
 export type MyArray = ft.Static<
-  typeof MyArraySchema
+  typeof MyArrayCodec
 >;
 // => number[]
 
 // ✅ Valid array of numbers
 assert.deepEqual(
-  MyArraySchema.parse([1, 2, 3]),
+  MyArrayCodec.parse([1, 2, 3]),
   [1, 2, 3],
 );
 
 // 🚨 Array contains something other than numbers
 assert.throws(() =>
-  MyArraySchema.parse([1, "2", 3]),
+  MyArrayCodec.parse([1, "2", 3]),
 );
 
 // 🚨 Not an array
 assert.throws(() =>
-  MyArraySchema.parse({ 0: 1, 1: 2, 2: 3 }),
+  MyArrayCodec.parse({ 0: 1, 1: 2, 2: 3 }),
 );
 ```
 
@@ -69,42 +69,42 @@ const ParsedIntegerString = ft.String.withParser({
   },
 });
 
-export const MyArraySchema = ft.Array(
+export const MyArrayCodec = ft.Array(
   ParsedIntegerString,
 );
 // => ft.Codec<number[]>
 export type MyArray = ft.Static<
-  typeof MyArraySchema
+  typeof MyArrayCodec
 >;
 // => number[]
 
 // ✅ Valid array of integer strings
 assert.deepEqual(
-  MyArraySchema.parse(["1", "2", "3"]),
+  MyArrayCodec.parse(["1", "2", "3"]),
   [1, 2, 3],
 );
 
 // ✅ Valid array of integers to serialize
 assert.deepEqual(
-  MyArraySchema.serialize([1, 2, 3]),
+  MyArrayCodec.serialize([1, 2, 3]),
   ["1", "2", "3"],
 );
 
 // 🚨 Array contains something other than integer
 //    strings
 assert.throws(() =>
-  MyArraySchema.parse(["1", "2", "3.14"]),
+  MyArrayCodec.parse(["1", "2", "3.14"]),
 );
 
 // 🚨 Array to serialize contains something other
 //    than integers
 assert.throws(() =>
-  MyArraySchema.serialize([1, 2, 3.14]),
+  MyArrayCodec.serialize([1, 2, 3.14]),
 );
 
 // 🚨 Not an array
 assert.throws(() =>
-  MyArraySchema.parse({ 0: "1", 1: "2", 2: "3" }),
+  MyArrayCodec.parse({ 0: "1", 1: "2", 2: "3" }),
 );
 ```
 
@@ -115,28 +115,28 @@ The `ft.ReadonlyArray` type has the same runtime behaviour as `ft.Array`, but th
 ```ts
 import * as ft from "funtypes";
 
-export const MyArraySchema = ft.ReadonlyArray(
+export const MyArrayCodec = ft.ReadonlyArray(
   ft.Number,
 );
 // => ft.Codec<readonly number[]>
 export type MyArray = ft.Static<
-  typeof MyArraySchema
+  typeof MyArrayCodec
 >;
 // => readonly number[]
 
 // ✅ Valid array of numbers
 assert.deepEqual(
-  MyArraySchema.parse([1, 2, 3]),
+  MyArrayCodec.parse([1, 2, 3]),
   [1, 2, 3],
 );
 
 // 🚨 Array contains something other than numbers
 assert.throws(() =>
-  MyArraySchema.parse([1, "2", 3]),
+  MyArrayCodec.parse([1, "2", 3]),
 );
 
 // 🚨 Not an array
 assert.throws(() =>
-  MyArraySchema.parse({ 0: 1, 1: 2, 2: 3 }),
+  MyArrayCodec.parse({ 0: 1, 1: 2, 2: 3 }),
 );
 ```

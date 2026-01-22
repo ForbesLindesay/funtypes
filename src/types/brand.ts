@@ -11,9 +11,7 @@ export function Brand<const B extends string, T>(
       _parse: (value, _innerValidate, innerValidateToPlaceholder) =>
         innerValidateToPlaceholder(entity, value) as any,
       _underlyingType: () => entity,
-      _showType(needsParens) {
-        return showType(entity, needsParens);
-      },
+      _showType: needsParens => showType(entity, needsParens),
     },
     {
       tag: 'brand',

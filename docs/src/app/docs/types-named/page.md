@@ -11,7 +11,7 @@ Use `ft.Named` to add names to types for use in error messages. This is especial
 ```ts
 import * as ft from "funtypes";
 
-const UserSchema = ft.Named(
+const UserCodec = ft.Named(
   "User",
   ft.Object({
     type: ft.Literal("USER"),
@@ -20,7 +20,7 @@ const UserSchema = ft.Named(
   }),
 );
 
-const PostSchema = ft.Named(
+const PostCodec = ft.Named(
   "Post",
   ft.Object({
     type: ft.Literal("POST"),
@@ -29,21 +29,21 @@ const PostSchema = ft.Named(
   }),
 );
 
-export const DbObjectSchema = ft.Union(
-  UserSchema,
-  PostSchema,
+export const DbObjectCodec = ft.Union(
+  UserCodec,
+  PostCodec,
 );
 // => ft.Codec<{ type: "USER"; id: number; name: string } | { type: "POST"; id: number; title: string }>
 
 export type DbObjectType = ft.Static<
-  typeof DbObjectSchema
+  typeof DbObjectCodec
 >;
 // => { type: "USER"; id: number; name: string } | { type: "POST"; id: number; title: string }
 
 // ✅ Instead of printing out the full type, it
 //    just refers to sub-types by name
 assert.deepEqual(
-  ft.showType(DbObjectSchema),
+  ft.showType(DbObjectCodec),
   "User | Post",
 );
 ```

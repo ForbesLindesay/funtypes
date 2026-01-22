@@ -26,9 +26,7 @@ export function Literal<A extends LiteralValue>(valueBase: A): Codec<A> {
                   : ``
               }`,
             ),
-      _showType() {
-        return showValue(valueBase);
-      },
+      _showType: () => showValue(valueBase),
     },
     {
       tag: 'literal',

@@ -10,7 +10,7 @@ To use funtypes, you first construct a codec. For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-schemas";
+import * as s from "funtypes-Codecs";
 
 export const UserCodec = ft.Object({
   id: ft.Number,

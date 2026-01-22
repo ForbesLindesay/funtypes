@@ -64,7 +64,7 @@ export interface ParsedValueConfig<
 }
 ```
 
-## Using ParsedValue as a Codec for data that needs serialization/parsing
+## Data that needs serialization/parsing
 
 We can use a `ParsedValue` to handle data that can't be natively represented by JSON. For example:
 
@@ -131,7 +131,7 @@ assert.deepEqual(
 );
 ```
 
-## Using ParsedValue to migrate old data
+## Migrating old data
 
 We can use a `ParsedValue` to handle migrating old data. For this use case, we only really need to specify the `parse` method.
 

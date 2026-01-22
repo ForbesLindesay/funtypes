@@ -18,9 +18,7 @@ export function Lazy<TUnderlying>(delayed: () => Codec<TUnderlying>): Codec<TUnd
       _parse: (value, _innerValidate, innerValidateToPlaceholder) =>
         innerValidateToPlaceholder(underlying(), value) as any,
       _underlyingType: underlying,
-      _showType(needsParens) {
-        return showType(underlying(), needsParens);
-      },
+      _showType: needsParens => showType(underlying(), needsParens),
     },
     {
       tag: 'lazy',

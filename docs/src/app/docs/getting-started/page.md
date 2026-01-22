@@ -2,7 +2,7 @@
 title: Getting started
 ---
 
-Funtypes allow you to take values about which you have no assurances and check that they conform to some type `A`. It also lets you parse serialized values into rich objects. This is done by means of composable type validators of primitives, literals, arrays, tuples, records, unions,
+Funtypes allow you to take values about which you have no assurances and check that they conform to some known type. It also lets you parse serialized values into rich objects. This is done by means of composable type validators of primitives, literals, arrays, tuples, records, unions,
 intersections and more.
 
 ## Installation

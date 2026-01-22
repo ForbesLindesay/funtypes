@@ -6,24 +6,24 @@ nextjs:
     description: Funtypes "unknown" type
 ---
 
-If you need a codec that is always valid, you can use `ft.Unknown`. This can allow you to validate outer parts of some schema, while still having some inner value that is Funtypes just passes through without changing it or validating it.
+If you need a codec that is always valid, you can use `ft.Unknown`. This can allow you to validate outer parts of some Codec, while still having some inner value that is Funtypes just passes through without changing it or validating it.
 
 ```ts
 import * as ft from "funtypes";
 
-const MySchema = ft.Unknown;
+const MyCodec = ft.Unknown;
 // => ft.Codec<unknown>
-type MyType = ft.Static<typeof MySchema>;
+type MyType = ft.Static<typeof MyCodec>;
 // => unknown
 
 // ✅ Accepts any value
 assert.deepEqual(
-  MySchema.parse({ hello: "world" }),
+  MyCodec.parse({ hello: "world" }),
   { hello: "worldxxx" },
 );
 
 // ✅ Accepts any value
-assert.deepEqual(MySchema.parse(42), 42);
+assert.deepEqual(MyCodec.parse(42), 42);
 ```
 
 ## Unknown with Intersection

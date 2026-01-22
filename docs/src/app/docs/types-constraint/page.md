@@ -46,16 +46,16 @@ export type NonEmptyNumbersArray = ft.Static<
 
 // ✅ Valid array of numbers
 assert.deepEqual(
-  MyArraySchema.parse([1, 2, 3]),
+  MyArrayCodec.parse([1, 2, 3]),
   [1, 2, 3],
 );
 
 // 🚨 Array is empty, failing our constraint
-assert.throws(() => MyArraySchema.parse([]));
+assert.throws(() => MyArrayCodec.parse([]));
 
 // 🚨 Array contains something other than numbers
 assert.throws(() =>
-  MyArraySchema.parse([1, "2", 3]),
+  MyArrayCodec.parse([1, "2", 3]),
 );
 ```
 

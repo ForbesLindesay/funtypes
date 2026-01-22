@@ -176,3 +176,9 @@ assert.deepEqual(
   },
 );
 ```
+
+{% callout title="Readonly Optional Properties" %}
+You can combine readonly and partial in one by using `ft.ReadonlyPartial` to create an object with properties that are both optional and readonly.
+
+You can also make an object's properties readonly or partial after the fact, by passing the object codec to the [`ft.Readonly`](/docs/types-readonly) or [`ft.Partial`](/docs/types-partial) utilities.
+{% /callout %}
