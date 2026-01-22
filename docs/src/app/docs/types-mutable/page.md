@@ -20,9 +20,7 @@ const ReadonlyArrayCodec = ft.ReadonlyArray(
 );
 // => Codec<readonly number[]>
 
-const ArrayCodec = ft.Mutable(
-  ReadonlyArrayCodec,
-);
+const ArrayCodec = ft.Mutable(ReadonlyArrayCodec);
 // => Codec<number[]>
 
 type Array = ft.Static<typeof ArrayCodec>;
@@ -68,9 +66,7 @@ const ReadonlyTupleCodec = ft.ReadonlyTuple(
 );
 // => Codec<readonly [ number, string ]>
 
-const TupleCodec = ft.Mutable(
-  ReadonlyTupleCodec,
-);
+const TupleCodec = ft.Mutable(ReadonlyTupleCodec);
 // => Codec<[ number, string ]>
 
 type Tuple = ft.Static<typeof TupleCodec>;

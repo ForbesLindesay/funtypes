@@ -24,10 +24,10 @@ export type MyTuple = ft.Static<
 // => [number, string]
 
 // ✅ Valid tuple
-assert.deepEqual(
-  MyTupleCodec.parse([42, "42"]),
-  [42, "42"],
-);
+assert.deepEqual(MyTupleCodec.parse([42, "42"]), [
+  42,
+  "42",
+]);
 
 // 🚨 Tuple is too short
 assert.throws(() => MyTupleCodec.parse([42]));
@@ -66,10 +66,10 @@ export type MyTuple = ft.Static<
 // => readonly [number, string]
 
 // ✅ Valid tuple
-assert.deepEqual(
-  MyTupleCodec.parse([42, "42"]),
-  [42, "42"],
-);
+assert.deepEqual(MyTupleCodec.parse([42, "42"]), [
+  42,
+  "42",
+]);
 
 // 🚨 Tuple is too short
 assert.throws(() => MyTupleCodec.parse([42]));

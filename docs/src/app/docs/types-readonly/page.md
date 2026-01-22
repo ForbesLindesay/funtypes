@@ -65,10 +65,7 @@ assert.deepEqual(
 ```ts
 import * as ft from "funtypes";
 
-const TupleCodec = ft.Tuple(
-  ft.Number,
-  ft.String,
-);
+const TupleCodec = ft.Tuple(ft.Number, ft.String);
 // => Codec<[ number, string ]>
 
 const ReadonlyTupleCodec =
@@ -93,13 +90,10 @@ If you prefer to use `Readonly` for most things, you can import from `"funtypes/
 ```ts
 import * as ft from "funtypes/readonly";
 
-export const MyArrayCodec = ft.Array(
-  ft.Number,
-);
+export const MyArrayCodec = ft.Array(ft.Number);
 // => ft.Codec<readonly number[]>
 
-export const MyMutableArrayCodec = ft.MutableArray(
-  ft.Number,
-);
+export const MyMutableArrayCodec =
+  ft.MutableArray(ft.Number);
 // => ft.Codec<number[]>
 ```

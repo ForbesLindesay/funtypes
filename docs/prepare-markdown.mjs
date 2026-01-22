@@ -1,4 +1,10 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'fs'
+import {
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFile,
+  writeFileSync,
+} from 'fs'
 import { format } from 'prettier/standalone'
 import * as prettierTypeScript from 'prettier/plugins/typescript'
 import prettierEstree from 'prettier/plugins/estree'
@@ -74,3 +80,9 @@ async function formatDirectory(path) {
 }
 
 await formatDirectory('src/app')
+
+const typeDefinitions = readFileSync('../lib/index.d.ts', 'utf8')
+writeFileSync(
+  'src/lib/funtypes-definitions.ts',
+  `export const FUNTYPES_DEFINITIONS = ${JSON.stringify(`declare module "funtypes" {${typeDefinitions}}`)}`,
+)

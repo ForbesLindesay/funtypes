@@ -11,9 +11,11 @@
   "browserslist": "defaults, not ie <= 11",
   "dependencies": {
     "@algolia/autocomplete-core": "^1.19.2",
+    "@codesandbox/sandpack-react": "^2.20.0",
     "@headlessui/react": "^2.2.6",
     "@markdoc/markdoc": "^0.5.2",
     "@markdoc/next.js": "^0.5.0",
+    "@monaco-editor/react": "^4.7.0",
     "@sindresorhus/slugify": "^2.2.1",
     "@tailwindcss/postcss": "^4.1.15",
     "@tailwindcss/typography": "^0.5.16",
