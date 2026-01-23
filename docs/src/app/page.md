@@ -128,7 +128,7 @@ Funtypes codecs are not just for validating, they can also simultaneously handle
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-Codecs";
+import * as s from "funtypes-schemas";
 
 const PostCodec = ft.Object({
   id: ft.Number,
