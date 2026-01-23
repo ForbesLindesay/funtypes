@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     default: 'Funtypes - Runtime validation for TypeScript',
   },
   description:
-    'Cache every single thing your app could ever do ahead of time, so your code never even has to run at all.',
+    'Funtypes validates and parses runtime data in TypeScript with complete type safety.',
 }
 
 export default function RootLayout({
