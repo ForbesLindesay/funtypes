@@ -17,7 +17,22 @@ export function Fence({
       theme={{ plain: {}, styles: [] }}
     >
       {({ className, style, tokens, getTokenProps }) => (
-        <pre className={className} style={style}>
+        <pre className={className + ' relative'} style={style}>
+          <button
+            type="button"
+            className="absolute top-0 right-0 p-2"
+            onClick={() => {
+              localStorage.setItem(
+                'funtypes-playground-code',
+                `import * as assert from "assert";\n` +
+                  children.trimEnd() +
+                  '\n',
+              )
+              location.assign('/playground')
+            }}
+          >
+            Open in playground
+          </button>
           <code className="text-xs md:text-sm">
             {tokens.map((line, lineIndex) => (
               <Fragment key={lineIndex}>

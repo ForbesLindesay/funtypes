@@ -82,7 +82,8 @@ async function formatDirectory(path) {
 await formatDirectory('src/app')
 
 const typeDefinitions = readFileSync('../lib/index.d.ts', 'utf8')
+const typeDefinitionsReadOnly = readFileSync('../lib/readonly.d.ts', 'utf8')
 writeFileSync(
   'src/lib/funtypes-definitions.ts',
-  `export const FUNTYPES_DEFINITIONS = ${JSON.stringify(`declare module "funtypes" {${typeDefinitions}}`)}`,
+  `export const FUNTYPES_DEFINITIONS = ${JSON.stringify(`declare module "funtypes" {${typeDefinitions}}\ndeclare module "funtypes/readonly" {${typeDefinitionsReadOnly.replace('./index.js', 'funtypes')}}`)}`,
 )

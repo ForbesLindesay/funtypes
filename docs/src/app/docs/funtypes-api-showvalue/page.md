@@ -20,6 +20,6 @@ assert.deepEqual(
     id: 42,
     name: "Forbes Lindesay",
   }),
-  `{ id: 42, name: "Forbes Lindesay" }`,
+  `{id: 42, name: "Forbes Lindesay"}`,
 );
 ```
