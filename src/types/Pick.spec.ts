@@ -97,12 +97,12 @@ test('Exported types', () => {
         a: number;
         b: string;
         c: boolean;
-    }, "a" | "c" | "z">>;
+    }, "a" | "c">>;
     export declare const MyNamedPickedType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
         c: boolean;
-    }, "a" | "c" | "z">>;
+    }, "a" | "c">>;
     export declare const MyPickedIntersectionType: ft.ObjectCodec<Pick<{
         a: number;
         b: string;
