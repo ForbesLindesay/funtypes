@@ -1,9 +1,9 @@
 import { assertRuntype, ObjectCodec, getInternal } from '../runtype';
 
-export function Pick<
-  const TObject extends { [key: string]: unknown },
-  const TKeys extends string[],
->(input: ObjectCodec<TObject>, keys: TKeys): ObjectCodec<Pick<TObject, TKeys[number]>> {
+export function Pick<const TObject, const TKeys extends string[]>(
+  input: ObjectCodec<TObject>,
+  keys: TKeys,
+): ObjectCodec<Pick<TObject, Extract<TKeys[number], keyof TObject>>> {
   assertRuntype(input);
   const internal = getInternal(input);
   if (!internal._pick) {
