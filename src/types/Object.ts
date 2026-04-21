@@ -140,9 +140,7 @@ export function ReadonlyObject<O extends RecordFields>(
   return InternalObject(fields, false, true);
 }
 
-export function Partial<O extends { [_: string]: unknown }>(
-  fields: ObjectCodec<O>,
-): ObjectCodec<{
+export function Partial<O>(fields: ObjectCodec<O>): ObjectCodec<{
   [K in keyof O]?: O[K];
 }>;
 export function Partial<O extends RecordFields>(

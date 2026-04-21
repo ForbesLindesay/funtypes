@@ -10,12 +10,11 @@ import blurIndigoImage from '@/images/blur-indigo.png'
 
 const codeLanguage = 'typescript'
 const code = `import * as ft from "funtypes"
-import * as s from "funtypes-schemas"
 
 export const UserSchema = ft.Object({
   id: ft.Number,
   name: ft.String,
-  profile: s.ParsedUrlString(),
+  profile: ft.ParsedUrlString(),
 })
 
 export type User = ft.Static<typeof UserSchema>

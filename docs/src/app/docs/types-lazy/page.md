@@ -46,7 +46,7 @@ assert.deepEqual(
 );
 
 // ✅ Cycles in these recursive structures are ok
-const NumberLoop = {
+const NumberLoop: any = {
   value: 1,
   next: { value: 2, next: null },
 };

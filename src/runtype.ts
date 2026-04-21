@@ -125,6 +125,7 @@ export interface Runtype<TParsed = unknown> {
    * not conform to the runtype, throws an exception.
    *
    * @throws ValidationError
+   * @deprecated Use `ft.assertType` instead.
    */
   assert(x: any): asserts x is TParsed;
 

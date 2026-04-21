@@ -12,19 +12,18 @@ For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
   name: ft.String,
-  dateOfBirth: s.ParsedDateTimeString(),
+  dateOfBirth: ft.ParsedDateTimeString(),
 });
 // => ft.Codec<{ id: number; name: string; dateOfBirth: Date }>
 
 // ✅ Serializes the date object to a
 //   string
 assert.deepEqual(
-  UserCodec.parse({
+  UserCodec.serialize({
     id: 1,
     name: "Forbes Lindesay",
     dateOfBirth: new Date(

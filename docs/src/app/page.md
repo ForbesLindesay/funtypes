@@ -128,12 +128,11 @@ Funtypes codecs are not just for validating, they can also simultaneously handle
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-schemas";
 
 const PostCodec = ft.Object({
   id: ft.Number,
   title: ft.String,
-  url: s.ParsedUrlString(),
+  url: ft.ParsedUrlString(),
 });
 
 assert.deepEqual(
@@ -158,7 +157,7 @@ assert.deepEqual(
   {
     id: 42,
     title: "Example Post",
-    url: "http://example.com",
+    url: "http://example.com/",
   },
 );
 ```

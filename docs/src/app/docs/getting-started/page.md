@@ -137,8 +137,6 @@ twice, once at the type level and then again at the value level, is a pain and n
 Fortunately you can define a static `Asteroid` type which is an alias to the `Codec`-derived type like so:
 
 ```ts
-import * as ft from "funtypes";
-
 type Asteroid = ft.Static<typeof AsteroidCodec>;
 ```
 

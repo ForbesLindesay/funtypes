@@ -18,6 +18,7 @@ export interface ConstraintIntrospection {
   readonly tag: 'constraint';
   readonly underlying: Runtype;
   readonly name?: string;
+  readonly options?: unknown;
 }
 
 export interface EnumIntrospection {

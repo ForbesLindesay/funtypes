@@ -1,9 +1,9 @@
 import { assertRuntype, ObjectCodec, getInternal } from '../runtype';
 
-export function Omit<
-  const TObject extends { [key: string]: unknown },
-  const TKeys extends string[],
->(input: ObjectCodec<TObject>, keys: TKeys): ObjectCodec<Omit<TObject, TKeys[number]>> {
+export function Omit<const TObject, const TKeys extends string[]>(
+  input: ObjectCodec<TObject>,
+  keys: TKeys,
+): ObjectCodec<Omit<TObject, TKeys[number]>> {
   assertRuntype(input);
   const internal = getInternal(input);
   if (!internal._omit) {

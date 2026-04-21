@@ -12,12 +12,11 @@ For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
   name: ft.String,
-  dateOfBirth: s.ParsedDateTimeString(),
+  dateOfBirth: ft.ParsedDateTimeString(),
 });
 // => ft.Codec<{ id: number; name: string; dateOfBirth: Date }>
 
@@ -65,6 +64,16 @@ assert.deepEqual(
 Note that TypeScript can tell that the type is constrained by the `Codec.test` call:
 
 ```ts
+import * as ft from "funtypes";
+
+export const UserCodec = ft.Object({
+  id: ft.Number,
+  name: ft.String,
+  dateOfBirth: ft.ParsedDateTimeString(),
+});
+
+// --header end--
+
 /**
  * TypeScript can infer that this function returns
  * a value of type `string`.

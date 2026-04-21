@@ -101,8 +101,8 @@ test('Exported types', () => {
   expect(readFileSync(`lib/types/KeyOf.spec.d.ts`, 'utf8')).toMatchInlineSnapshot(`
     "import * as ft from '..';
     export declare const StringObjectKeys: ft.Codec<"foo" | "bar">;
-    export declare const NumericObjectKeys: ft.Codec<2 | "2" | 4 | "4">;
-    export declare const MixedObjectKeys: ft.Codec<"foo" | "4" | "5" | 5>;
+    export declare const NumericObjectKeys: ft.Codec<4 | 2 | "2" | "4">;
+    export declare const MixedObjectKeys: ft.Codec<"4" | "5" | "foo" | 5>;
     "
   `);
 });

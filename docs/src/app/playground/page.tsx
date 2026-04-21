@@ -8,9 +8,7 @@ import { useEffect, useState } from 'react'
 import initSwc, { transformSync } from '@swc/wasm-web'
 import * as funtypes from 'funtypes'
 import * as funtypesReadOnly from 'funtypes/readonly'
-import * as funtypesSchemas from 'funtypes-schemas'
 import { Console, Hook, Unhook } from 'console-feed'
-import deepEqual from 'fast-deep-equal'
 
 const DEFAULT_CODE = `import * as ft from "funtypes";
 
@@ -140,9 +138,6 @@ export default function Playground() {
             if (name === 'funtypes/readonly') {
               return funtypesReadOnly
             }
-            if (name === 'funtypes-schemas') {
-              return funtypesSchemas
-            }
             if (name === 'assert') {
               return {
                 deepEqual: (a: any, b: any) => {
@@ -203,7 +198,7 @@ export default function Playground() {
         <DocsHeader title="Funtypes Playground" />
         <div className="hidden md:block">
           <div className="flex" style={{ height: '70vh' }}>
-            <div className="flex-grow basis-0 overflow-hidden rounded-sm border border-gray-200 shadow-sm">
+            <div className="flex-grow basis-0 rounded-sm border border-gray-200 shadow-sm">
               <Editor
                 height="100%"
                 value={code}
@@ -226,6 +221,8 @@ export default function Playground() {
                     { content: FUNTYPES_DEFINITIONS },
                     {
                       content: `declare module "assert" {
+                      export function deepEqual(a: any, b: true): asserts a is true;
+                      export function deepEqual(a: any, b: false): asserts a is false;
                       export function deepEqual(a: any, b: any): void;
                       export function throws(fn: () => void): void;
                     }`,
@@ -333,4 +330,65 @@ export default function Playground() {
       <PrevNextLinks />
     </div>
   )
+}
+
+function deepEqual(a: any, b: any): boolean {
+  return deepEqualInternal(a, b, new Map())
+}
+function deepEqualInternal(a: any, b: any, seen: Map<any, any>): boolean {
+  if (a === b) return true
+  if (
+    typeof a !== 'object' ||
+    typeof b !== 'object' ||
+    a === null ||
+    b === null
+  ) {
+    return false
+  }
+  const right = seen.get(a)
+  if (b === right) {
+    return true
+  }
+  seen.set(a, b)
+  try {
+    if (Array.isArray(a)) {
+      if (!Array.isArray(b)) return false
+      if (a.length !== b.length) return false
+      for (let i = 0; i < a.length; i++) {
+        if (!deepEqualInternal(a[i], b[i], seen)) return false
+      }
+      return true
+    }
+    if (a instanceof URL) {
+      if (!(b instanceof URL)) return false
+      return a.href === b.href
+    }
+    if (b instanceof URL) return false
+
+    if (a instanceof Date) {
+      if (!(b instanceof Date)) return false
+      return a.getTime() === b.getTime()
+    }
+    if (b instanceof Date) return false
+
+    if (a instanceof Uint8Array) {
+      if (!(b instanceof Uint8Array)) return false
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false
+      }
+      return true
+    }
+    if (b instanceof Uint8Array) return false
+
+    const aKeys = Object.keys(a)
+    const bKeys = Object.keys(b)
+    if (aKeys.length !== bKeys.length) return false
+    for (const key of aKeys) {
+      if (!bKeys.includes(key)) return false
+      if (!deepEqualInternal(a[key], b[key], seen)) return false
+    }
+    return true
+  } finally {
+    seen.delete(a)
+  }
 }

@@ -74,6 +74,6 @@ type Tuple = ft.Static<typeof TupleCodec>;
 
 assert.deepEqual(
   ft.showType(TupleCodec),
-  "[ number, string ]",
+  "[number, string]",
 );
 ```

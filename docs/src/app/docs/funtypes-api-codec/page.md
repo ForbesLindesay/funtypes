@@ -10,12 +10,11 @@ To use funtypes, you first construct a codec. For example:
 
 ```ts
 import * as ft from "funtypes";
-import * as s from "funtypes-schemas";
 
 export const UserCodec = ft.Object({
   id: ft.Number,
   name: ft.String,
-  dateOfBirth: s.ParsedDateTimeString(),
+  dateOfBirth: ft.ParsedDateTimeString(),
 });
 // => ft.Codec<{ id: number; name: string; dateOfBirth: Date }>
 ```
@@ -24,15 +23,6 @@ This codec can be used to parse, validate and serialize values. For a simple cod
 
 ```ts
 export interface Codec<TParsed> {
-  /**
-   * Verifies that a value conforms to this runtype.
-   * When given a value that does not conform to the
-   * runtype, throws an exception.
-   *
-   * @throws ValidationError
-   */
-  assert(x: any): asserts x is TParsed;
-
   /**
    * A type guard for this runtype.
    */

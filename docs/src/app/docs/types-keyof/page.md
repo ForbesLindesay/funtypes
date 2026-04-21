@@ -44,6 +44,8 @@ assert.throws(() => UserKeyCodec.parse([42]));
 If the type has numeric keys, we allow both the number and the string as valid values.
 
 ```ts
+import * as ft from "funtypes";
+
 export const MyKeyCodec = ft.KeyOf({
   42: {},
   five: {},
@@ -81,6 +83,10 @@ assert.throws(() => UserKeyCodec.parse([42]));
 TypeScript gives a different type to `{ "42": {} }` vs. `{ 42: {} }` but they have the same type at runtime, so we can't tell them apart. Because of this, we'll allow both the numeric representation and the string representation at runtime, but if you use `{ "42": {} }`, the static types will incorrectly only include the string representation.
 
 ```ts
+import * as ft from "funtypes";
+
+// --header end--
+
 export const MyKeyCodec = ft.KeyOf({
   "42": {},
 });

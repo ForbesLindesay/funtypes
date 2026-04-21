@@ -285,10 +285,10 @@ test('Exported types', () => {
         } | undefined;
     }>;
     export declare const UnionNumbersRecord: ft.Codec<{
-        42?: {
+        24?: {
             value: 42;
         } | undefined;
-        24?: {
+        42?: {
             value: 42;
         } | undefined;
     }>;

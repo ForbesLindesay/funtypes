@@ -79,7 +79,7 @@ type ReadonlyTuple = ft.Static<
 
 assert.deepEqual(
   ft.showType(ReadonlyTupleCodec),
-  "readonly [ number, string ]",
+  "readonly [number, string]",
 );
 ```
 

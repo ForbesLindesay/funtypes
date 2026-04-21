@@ -1,10 +1,10 @@
-import { failure, Result, unableToAssign } from '../result';
+import { Failure, failure, Result, unableToAssign } from '../result';
 import { create, Codec, assertRuntype, showType, showValue } from '../runtype';
 
 export function Constraint<TUnderlying, TConstrained extends TUnderlying = TUnderlying>(
   underlying: Codec<TUnderlying>,
-  constraint: (x: TUnderlying) => boolean | string,
-  options?: { name?: string },
+  constraint: (x: TUnderlying) => boolean | string | Failure,
+  options?: { name?: string; options?: unknown },
 ): Codec<TConstrained> {
   assertRuntype(underlying);
   const runtype: Codec<TConstrained> = create<TConstrained>(
@@ -15,6 +15,9 @@ export function Constraint<TUnderlying, TConstrained extends TUnderlying = TUnde
         if (validated.success) {
           const result = constraint(mode === 'p' ? validated.value : value);
           if (result !== true) {
+            if (typeof result === 'object') {
+              return result;
+            }
             const message =
               typeof result === 'string'
                 ? result
@@ -30,11 +33,13 @@ export function Constraint<TUnderlying, TConstrained extends TUnderlying = TUnde
       _showType: needsParens =>
         options?.name || `WithConstraint<${showType(underlying, needsParens)}>`,
     },
-    {
-      tag: 'constraint',
-      underlying,
-      name: options && options.name,
-    },
+    Object.assign(
+      {
+        tag: 'constraint' as const,
+        underlying,
+      },
+      options,
+    ),
   );
   return runtype;
 }

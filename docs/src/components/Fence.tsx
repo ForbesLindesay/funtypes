@@ -12,27 +12,36 @@ export function Fence({
 }) {
   return (
     <Highlight
-      code={children.trimEnd()}
+      code={
+        children.includes(`// --header end--\n`)
+          ? children.split(`// --header end--\n`)[1].trim()
+          : children.trim()
+      }
       language={language}
       theme={{ plain: {}, styles: [] }}
     >
       {({ className, style, tokens, getTokenProps }) => (
         <pre className={className + ' relative'} style={style}>
-          <button
-            type="button"
-            className="absolute top-0 right-0 p-2"
-            onClick={() => {
-              localStorage.setItem(
-                'funtypes-playground-code',
-                `import * as assert from "assert";\n` +
-                  children.trimEnd() +
-                  '\n',
-              )
-              location.assign('/playground')
-            }}
-          >
-            Open in playground
-          </button>
+          {children.trimStart().startsWith('import ') ? (
+            <button
+              type="button"
+              className="absolute top-0 right-0 p-2"
+              onClick={() => {
+                localStorage.setItem(
+                  'funtypes-playground-code',
+                  `import * as assert from "assert";\n` +
+                    children
+                      .replace(/\/\/ --header end--\n/g, '')
+                      .replace(/\n\n+/g, '\n\n')
+                      .trim() +
+                    '\n',
+                )
+                location.assign('/playground')
+              }}
+            >
+              Open in playground
+            </button>
+          ) : null}
           <code className="text-xs md:text-sm">
             {tokens.map((line, lineIndex) => (
               <Fragment key={lineIndex}>
