@@ -141,9 +141,7 @@ function findDiscriminator<TResult>(
     if (largestDiscriminant === bestDiscriminatorSize && commonFieldNames.has(fieldName)) {
       return [
         fieldName,
-        new Map(
-          Array.from(fieldTypes).map(([fieldValue, types]) => [fieldValue, Array.from(types)]),
-        ),
+        new Map([...fieldTypes].map(([fieldValue, types]) => [fieldValue, [...types]])),
       ] as const;
     }
   }
@@ -182,7 +180,7 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
         typeStrings.add(showType(v, true));
       }
     }
-    const typesString = Array.from(typeStrings).join(' | ');
+    const typesString = [...typeStrings].join(' | ');
     return (value, innerValidate) => {
       if (!value || typeof value !== 'object') {
         return expected(typesString, value);
@@ -205,9 +203,7 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
         return validateWithoutKeyInner(validator, value, innerValidate);
       } else {
         const err = expected(
-          Array.from(types.keys())
-            .map(v => (typeof v === 'string' ? `'${v}'` : v))
-            .join(' | '),
+          [...types.keys()].map(v => (typeof v === 'string' ? `'${v}'` : v)).join(' | '),
           value[tag],
           {
             key: /^\d+$/.test(tag) ? `[${tag}]` : tag,
