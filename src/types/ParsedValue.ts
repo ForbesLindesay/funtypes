@@ -9,6 +9,7 @@ import {
   showType,
   Cycle,
 } from '../runtype';
+import { JsonSchemaContext, JsonSchemaResult } from '../standardSchema';
 import { Never } from './never';
 
 export interface ParsedValueConfig<TUnderlying, TParsed> {
@@ -16,6 +17,7 @@ export interface ParsedValueConfig<TUnderlying, TParsed> {
   parse: (value: TUnderlying) => Result<TParsed>;
   serialize?: (value: TParsed) => Result<TUnderlying>;
   test?: Runtype<TParsed>;
+  toJsonSchema?: (ctx: JsonSchemaContext) => JsonSchemaResult;
 }
 export function ParsedValue<TUnderlying, TParsed>(
   underlying: Runtype<TUnderlying>,
@@ -122,6 +124,7 @@ export function ParsedValue<TUnderlying, TParsed>(
         }
       },
       _showType: () => config.name || `ParsedValue<${showType(underlying, false)}>`,
+      _toJsonSchema: config.toJsonSchema,
     },
     {
       tag: 'parsed',

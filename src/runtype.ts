@@ -1,10 +1,12 @@
 import type { Result, Failure } from './result';
 
 import { ValidationError } from './errors';
-import { success } from './result';
+import { showError, success } from './result';
 import { RuntypeIntrospection } from './introspection';
 import { ParsedValue, ParsedValueConfig } from './types/ParsedValue';
 import { Constraint } from './types/constraint';
+import { StandardSchemaV1 } from '@standard-schema/spec';
+import { JsonSchemaContext, JsonSchemaResult } from './standardSchema';
 
 export type InnerValidateHelper = <T>(runtype: Runtype<T>, value: unknown) => Result<T>;
 declare const internalSymbol: unique symbol;
@@ -112,6 +114,14 @@ export interface InternalValidation<TParsed> {
    * Omit keys from an object
    */
   _omit?: (omit: (t: Codec<any>) => Codec<any>, keys: readonly string[]) => Codec<any>;
+  /**
+   * Indicates this is an optional wrapper around a sub-type
+   */
+  _isOptional?: Runtype;
+  /**
+   * Override the output when this type is converted to JSON schema
+   */
+  _toJsonSchema?: (ctx: JsonSchemaContext) => JsonSchemaResult;
 }
 
 /**
@@ -156,7 +166,7 @@ export interface Runtype<TParsed = unknown> {
   readonly [internal]: InternalValidation<TParsed>;
 }
 
-export interface Codec<TParsed> extends Runtype<TParsed> {
+export interface Codec<TParsed> extends Runtype<TParsed>, StandardSchemaV1<unknown, TParsed> {
   /**
    * Validates the value conforms to this type, and performs
    * the `serialize` action for any `ParsedValue` types.
@@ -224,6 +234,10 @@ export interface Codec<TParsed> extends Runtype<TParsed> {
 export interface ObjectCodec<TParsed> extends Codec<TParsed> {
   readonly CodecType: 'ObjectCodec' | undefined;
 }
+export interface OptionalCodec<TParsed> extends Codec<TParsed | undefined> {
+  readonly CodecType: 'OptionalCodec' | undefined;
+}
+
 /**
  * Obtains the static type associated with a Runtype.
  */
@@ -276,6 +290,16 @@ export function create<T>(
     withParser: <TParsedNew>(value: ParsedValueConfig<T, TParsedNew>) =>
       ParsedValue<T, TParsedNew>(A, value),
     [internal]: internalImplementation,
+    '~standard': {
+      vendor: 'funtypes',
+      version: 1,
+      validate: value => {
+        const validated = safeParse(value);
+        return validated.success
+          ? { value: validated.value }
+          : { issues: [{ message: showError(validated) }] };
+      },
+    },
   };
 
   return A;

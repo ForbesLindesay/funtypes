@@ -42,6 +42,9 @@
   },
   "author": "Thomas Crockett",
   "license": "MIT",
+  "dependencies": {
+    "@standard-schema/spec": "^1.1.0"
+  },
   "devDependencies": {
     "@babel/parser": "^7.17.8",
     "@microsoft/api-extractor": "^7.47.9",

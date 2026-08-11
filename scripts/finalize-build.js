@@ -107,6 +107,8 @@ const replacements = {
   _cycle: 'c',
   _deep: 'd',
   _keysFromIntersect: 'e',
+  _toJsonSchema: 'j',
+  _isOptional: 'o',
   _parse: 'p',
   _test: 't',
   _serialize: 's',

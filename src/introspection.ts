@@ -20,6 +20,12 @@ export interface ConstraintIntrospection {
   readonly name?: string;
 }
 
+export interface DefaultIntrospection {
+  readonly tag: 'default';
+  readonly underlying: Runtype;
+  readonly defaultValue: unknown;
+}
+
 export interface EnumIntrospection {
   readonly tag: 'enum';
   readonly enumObject: { [key: string]: number | string };
@@ -54,6 +60,13 @@ export interface NamedIntrospection {
   readonly tag: 'named';
   readonly underlying: Runtype;
   readonly name: string;
+}
+
+export interface DocumentedIntrospection {
+  readonly tag: 'comment';
+  readonly underlying: Runtype;
+  readonly title: string;
+  readonly description?: string;
 }
 
 export interface NeverIntrospection {
@@ -140,6 +153,8 @@ export type RuntypeIntrospection =
   | ArrayIntrospection
   | BrandIntrospection
   | ConstraintIntrospection
+  | DefaultIntrospection
+  | DocumentedIntrospection
   | EnumIntrospection
   | InstanceOfIntrospection
   | IntersectIntrospection
@@ -150,9 +165,9 @@ export type RuntypeIntrospection =
   | NeverIntrospection
   | ObjectIntrospection
   | ParsedValueIntrospection
+  | PrimitiveIntrospection
   | RecordIntrospection
   | SealedIntrospection
   | TupleIntrospection
   | UnionIntrospection
-  | UnknownIntrospection
-  | PrimitiveIntrospection;
+  | UnknownIntrospection;
