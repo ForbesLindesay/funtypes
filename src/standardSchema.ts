@@ -69,31 +69,30 @@ export function toStandardJsonSchema<T>(
   return fresh;
 }
 
-function cachedToJsonSchema(runtype: Runtype, direction: JsonSchemaMode) {
-  const cache = new Map<string, JsonSchema>();
-  return (options: StandardJSONSchemaV1.Options): JsonSchema => {
-    const cached = cache.get(options.target);
-    if (cached) return cached;
-    const fresh = toJsonSchema(runtype, { target: options.target, mode: direction });
-    cache.set(options.target, fresh);
-    return fresh;
-  };
+function cachedToJsonSchema(runtype: Runtype, mode: JsonSchemaMode) {
+  // The standard-schema spec passes a `target`, but we produce the same output for every
+  // target, so one cached schema can be reused regardless of which target is requested.
+  let cache: JsonSchema | undefined;
+  return (): JsonSchema => cache ?? (cache = toJsonSchema(runtype, { mode }));
 }
 
 export type JsonSchemaResult = JsonSchema | { type: 'optional'; underlying?: JsonSchema };
 
 export interface JsonSchemaOptions {
-  target: StandardJSONSchemaV1.Target;
-  mode: JsonSchemaMode;
+  /**
+   * Defaults to 'parsed'.
+   */
+  mode?: JsonSchemaMode;
 }
-export interface JsonSchemaContext extends JsonSchemaOptions {
+export interface JsonSchemaContext {
+  mode: JsonSchemaMode;
   toJsonSchema: (runtype: Runtype, name?: string) => JsonSchemaResult;
 }
 
-export function toJsonSchema(runtype: Runtype, ctx: JsonSchemaOptions): JsonSchema {
+export function toJsonSchema(runtype: Runtype, options?: JsonSchemaOptions): JsonSchema {
   const definitionNames = new Map<string, Runtype>();
   const $defs: Record<string, JsonSchema> = {};
-  const innerContext: JsonSchemaContext = { ...ctx, toJsonSchema };
+  const innerContext: JsonSchemaContext = { mode: options?.mode ?? 'parsed', toJsonSchema };
 
   const result = assertNotOptional(toJsonSchema(runtype));
   if (definitionNames.size) {
@@ -152,8 +151,7 @@ const HANDLERS: {
   lazy: notSupported,
   symbol: notSupported,
   literal: ({ value }) => {
-    if (value === undefined)
-      throw new Error(`The undefined funtype cannot be represented in JSON schema`);
+    if (value === undefined) return { type: 'optional' };
     return { type: value === null ? ('null' as const) : (typeof value as any), const: value };
   },
   array: (i, ctx) => ({ type: 'array', items: assertNotOptional(ctx.toJsonSchema(i.element)) }),
@@ -164,7 +162,7 @@ const HANDLERS: {
     const t = ctx.toJsonSchema(i.underlying);
     const underlying = t.type === 'optional' ? t.underlying : t;
     if (!underlying) return t;
-    if (underlying) underlying.default = i.defaultValue;
+    underlying.default = i.defaultValue;
     if (ctx.mode !== 'parsed') {
       underlying.nullable = true;
       if (t.type !== 'optional') {
@@ -173,7 +171,7 @@ const HANDLERS: {
     }
     return t;
   },
-  documented: (i, ctx) => {
+  comment: (i, ctx) => {
     const result = ctx.toJsonSchema(i.underlying);
     const t = result.type === 'optional' ? result.underlying : result;
     if (t) {
@@ -205,8 +203,11 @@ const HANDLERS: {
           if (s.properties) {
             objectType.properties = { ...(objectType.properties ?? {}), ...s.properties };
           }
-          if (s.additionalProperties) {
-            objectType.additionalProperties = s.additionalProperties;
+          if (s.additionalProperties !== undefined) {
+            objectType.additionalProperties =
+              objectType.additionalProperties === false || s.additionalProperties === false
+                ? false
+                : s.additionalProperties;
           }
         }
       } else {
@@ -217,7 +218,7 @@ const HANDLERS: {
 
     return constraints.length === 1 ? constraints[0] : { allOf: constraints };
   },
-  keyOf: i => ({ type: 'string', enum: [...i.keys] }),
+  keyOf: i => ({ type: 'string', ...(i.keys.size ? { enum: [...i.keys] } : {}) }),
   named: (i, ctx) => ctx.toJsonSchema(i.underlying, i.name),
   never: () => ({ not: {} }),
   number: () => ({ type: 'number' }),
@@ -236,7 +237,7 @@ const HANDLERS: {
         })
         .filter(v => v !== null),
     );
-    return { type: 'object', properties, required };
+    return { type: 'object', properties, ...(required.length ? { required } : {}) };
   },
   parsed: (i, ctx) => ctx.toJsonSchema(ctx.mode === 'parsed' && i.test ? i.test : i.underlying),
   record: (i, ctx) => {
@@ -244,7 +245,14 @@ const HANDLERS: {
     const underlying = valueType.type === 'optional' ? valueType.underlying : valueType;
     return { type: 'object', additionalProperties: underlying };
   },
-  sealed: (i, ctx) => ctx.toJsonSchema(i.underlying),
+  sealed: (i, ctx) => {
+    const result = ctx.toJsonSchema(i.underlying);
+    const t = result.type === 'optional' ? result.underlying : result;
+    if (t && t.type === 'object' && t.additionalProperties === undefined) {
+      t.additionalProperties = false;
+    }
+    return result;
+  },
   string: () => ({ type: 'string' }),
   tuple: (i, ctx) => ({
     type: 'array',

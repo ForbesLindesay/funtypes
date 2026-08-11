@@ -100,7 +100,7 @@ test('Partial(Named(Object))', () => {
 export const OptionalProperties = ft.Object({
   a: ft.String,
   b: ft.Optional(ft.String),
-  c: ft.Documented({ title: 'A title for this field' }, ft.Optional(ft.String)),
+  c: ft.WithComment({ title: 'A title for this field' }, ft.Optional(ft.String)),
 });
 test('OptionalProperties', () => {
   expect(ft.showType(OptionalProperties)).toMatchInlineSnapshot(

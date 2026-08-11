@@ -30,7 +30,7 @@ export { KeyOf } from './types/KeyOf';
 export { Lazy } from './types/lazy';
 export type { LiteralValue } from './types/literal';
 export { Literal, Null, Undefined } from './types/literal';
-export { Documented } from './types/Documented';
+export { type WithCommentOptions, WithComment } from './types/WithComment';
 export { Named } from './types/Named';
 export { Never } from './types/never';
 export { Omit } from './types/Omit';
