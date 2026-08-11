@@ -112,3 +112,7 @@ export interface Codec<TParsed> {
   introspection: RuntypeIntrospection;
 }
 ```
+
+{% callout title="Codec is also a Standard Schema" %}
+Every `Codec` automatically implements the [Standard Schema](https://standardschema.dev/) spec via `Codec['~standard']`, so you can pass any Funtypes `Codec` directly to tools that support Standard Schema. See [Standard Schema & JSON Schema](/docs/standard-schema) for more, including how to also generate a JSON Schema representation of a `Codec`.
+{% /callout %}

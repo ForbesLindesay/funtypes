@@ -61,8 +61,22 @@ export interface ParsedValueConfig<
    * to be valid.
    */
   test?: Codec<TParsed>;
+  /**
+   * An optional override for how this Codec is
+   * converted to JSON Schema by `ft.toJsonSchema`/
+   * `ft.toStandardJsonSchema`. Without this, Funtypes
+   * falls back to describing `test` (if provided) or
+   * `TUnderlying` otherwise, which may not accurately
+   * reflect `TParsed` if `parse` changes the shape of
+   * the value.
+   */
+  toJsonSchema?: (
+    ctx: JsonSchemaContext,
+  ) => JsonSchemaResult;
 }
 ```
+
+See [Standard Schema & JSON Schema](/docs/standard-schema) for more on `toJsonSchema`.
 
 ## Data that needs serialization/parsing
 

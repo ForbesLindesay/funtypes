@@ -130,19 +130,15 @@ assert.deepEqual(
 
 ## Optional Properties
 
-If you need some properties to be treated as optional in the TypeScript types, you can use `ft.Partial`. To make some properties optional and others required, you can use `ft.Intersect` to merge the required props and the optional props:
+If you need some properties to be treated as optional in the TypeScript types, wrap them in [`ft.Optional`](/docs/types-union#ft-optional):
 
 ```ts
 import * as ft from "funtypes";
 
-export const UserCodec = ft.Intersect(
-  ft.Object({
-    id: ft.Number,
-  }),
-  ft.Partial({
-    name: ft.Union(ft.String, ft.Undefined),
-  }),
-);
+export const UserCodec = ft.Object({
+  id: ft.Number,
+  name: ft.Optional(ft.String),
+});
 // => ft.Codec<{ id: number; name?: string }>
 
 export type User = ft.Static<typeof UserCodec>;
@@ -165,8 +161,8 @@ assert.deepEqual(
   },
 );
 
-// ✅ Missing properties that were
-//    "Partial" are ignored.
+// ✅ The property can be left out, and is
+//    omitted from the parsed value entirely
 assert.deepEqual(
   UserCodec.parse({
     id: 1,
@@ -176,6 +172,24 @@ assert.deepEqual(
   },
 );
 ```
+
+`ft.Optional(SomeCodec)` is shorthand for `ft.Union(SomeCodec, ft.Undefined)`, but it also tells `ft.Object` to treat the property as optional: it's typed as `name?: string` rather than as a required property that happens to allow `undefined` (`name: string | undefined`), and Funtypes omits it from the parsed/serialized value entirely when it's missing or `undefined`, the same way [`ft.Partial`](/docs/types-partial) does.
+
+{% callout title="Merging separately defined required and optional properties" %}
+If you already have two separate object codecs, e.g. one describing required fields and one describing optional fields, you can still combine them with `ft.Intersect` and `ft.Partial`:
+
+```ts
+import * as ft from "funtypes";
+
+export const UserCodec = ft.Intersect(
+  ft.Object({ id: ft.Number }),
+  ft.Partial({ name: ft.String }),
+);
+// => ft.Codec<{ id: number; name?: string }>
+```
+
+This is most useful when the required and optional parts are already defined elsewhere and you want to compose them, rather than when you're just declaring a couple of optional fields on a new object, where `ft.Optional` is simpler.
+{% /callout %}
 
 {% callout title="Readonly Optional Properties" %}
 You can combine readonly and partial in one by using `ft.ReadonlyPartial` to create an object with properties that are both optional and readonly.
