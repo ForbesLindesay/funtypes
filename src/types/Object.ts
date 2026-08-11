@@ -9,6 +9,7 @@ import {
   isRuntype,
   ObjectCodec,
   getInternal,
+  OptionalCodec,
 } from '../runtype';
 import { hasKey } from '../util';
 import { Failure } from '..';
@@ -39,11 +40,12 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
         return createValidationPlaceholder(Object.create(null), (placeholder: any) => {
           let fullError: FullError | undefined = undefined;
           let firstError: Failure | undefined;
-          for (const key in fields) {
+          for (const [key, fieldSchema] of Object.entries(fields)) {
+            const isOptional = isPartial || getInternal(fieldSchema)._isOptional;
             if (!isPartial || (hasKey(key, x) && x[key] !== undefined)) {
-              const value = isPartial || hasKey(key, x) ? x[key] : undefined;
+              const value = isOptional || hasKey(key, x) ? x[key] : undefined;
               let validated = innerValidate(
-                fields[key],
+                fieldSchema,
                 value,
                 sealed && sealed._deep ? { _deep: true } : false,
               );
@@ -88,13 +90,13 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
         const keys = Object.keys(fields);
         return keys.length
           ? `{ ${keys
-              .map(
-                k =>
-                  `${isReadonly ? 'readonly ' : ''}${k}${isPartial ? '?' : ''}: ${showType(
-                    fields[k],
-                    false,
-                  )}`,
-              )
+              .map(k => {
+                const isOptional = getInternal(fields[k])._isOptional;
+                return `${isReadonly ? 'readonly ' : ''}${k}${isPartial || isOptional ? '?' : ''}: ${showType(
+                  isOptional ?? fields[k],
+                  false,
+                )}`;
+              })
               .join('; ')} }`
           : '{}';
       },
@@ -126,17 +128,37 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
 
 function Obj<O extends RecordFields>(
   fields: O,
-): ObjectCodec<{
-  -readonly [K in keyof O]: Static<O[K]>;
-}> {
+): ObjectCodec<
+  {
+    [key in keyof O]: (
+      parameter: O[key] extends OptionalCodec<infer T>
+        ? { readonly [k in key]?: T }
+        : O[key] extends Runtype<infer T>
+          ? { readonly [k in key]-?: T }
+          : unknown,
+    ) => any;
+  }[keyof O] extends (k: infer I) => void
+    ? { -readonly [K in keyof I]: I[K] }
+    : never
+> {
   return InternalObject(fields, false, false);
 }
 export { Obj as Object };
 export function ReadonlyObject<O extends RecordFields>(
   fields: O,
-): ObjectCodec<{
-  readonly [K in keyof O]: Static<O[K]>;
-}> {
+): ObjectCodec<
+  {
+    [key in keyof O]: (
+      parameter: O[key] extends OptionalCodec<infer T>
+        ? { readonly [k in key]?: T }
+        : O[key] extends Runtype<infer T>
+          ? { readonly [k in key]-?: T }
+          : unknown,
+    ) => any;
+  }[keyof O] extends (k: infer I) => void
+    ? { readonly [K in keyof I]: I[K] }
+    : never
+> {
   return InternalObject(fields, false, true);
 }
 

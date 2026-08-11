@@ -9,8 +9,9 @@ import {
   showType,
   parenthesize,
   showValue,
+  OptionalCodec,
 } from '../runtype';
-import { LiteralValue, Null } from './literal';
+import { LiteralValue, Null, Undefined } from './literal';
 import { lazyValue } from './lazy';
 import {
   andError,
@@ -152,6 +153,16 @@ function findDiscriminator<TResult>(
  */
 export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
   ...alternatives: TAlternatives
+): Codec<
+  {
+    [key in keyof TAlternatives]: TAlternatives[key] extends Runtype<infer T> ? T : unknown;
+  }[number]
+> {
+  return UnionCore(alternatives);
+}
+function UnionCore<const TAlternatives extends readonly Runtype<unknown>[]>(
+  alternatives: TAlternatives,
+  isOptional?: Runtype,
 ): Codec<
   {
     [key in keyof TAlternatives]: TAlternatives[key] extends Runtype<infer T> ? T : unknown;
@@ -342,6 +353,7 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
         parenthesize(`${flatAlternatives.map(v => showType(v, true)).join(' | ')}`, needsParens),
       _asMutable: mapper => Union(...flatAlternatives.map(mapper)),
       _asReadonly: mapper => Union(...flatAlternatives.map(mapper)),
+      _isOptional: isOptional,
     },
     {
       tag: 'union',
@@ -352,6 +364,21 @@ export function Union<const TAlternatives extends readonly Runtype<unknown>[]>(
   return runtype;
 }
 
+/**
+ * A shorthand for a union of some type and null. Use this instead of `Union(type, Null)`.
+ */
 export function Nullable<T>(type: Codec<T>): Codec<T | null> {
-  return Union(type, Null);
+  return UnionCore([type, Null]);
+}
+
+/**
+ * A shorthand for a union of some type and undefined that will also make the property
+ * itself optional when used in in `Object` or `ReadonlyObject`.
+ *
+ * Use this instead of `Union(type, Undefined)` if you would like the property to be marked
+ * as optional in TypeScript.
+ */
+export function Optional<T>(type: Codec<T>): OptionalCodec<T> {
+  const result = UnionCore([type, Undefined], type);
+  return result as OptionalCodec<T>;
 }

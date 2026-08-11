@@ -27,8 +27,7 @@ export function Constraint<TUnderlying, TConstrained extends TUnderlying = TUnde
         return validated as Result<TConstrained>;
       },
       _underlyingType: () => underlying,
-      _showType: needsParens =>
-        options?.name || `WithConstraint<${showType(underlying, needsParens)}>`,
+      _showType: () => options?.name || `WithConstraint<${showType(underlying, false)}>`,
     },
     {
       tag: 'constraint',
