@@ -1,5 +1,6 @@
 # Compiled output
-lib/
+/lib/
+/docs/src/lib/funtypes-definitions.ts
 
 # Code coverage output
 coverage/
