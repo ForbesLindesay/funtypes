@@ -65,7 +65,7 @@ export interface NamedIntrospection {
 export interface DocumentedIntrospection {
   readonly tag: 'comment';
   readonly underlying: Runtype;
-  readonly title: string;
+  readonly title?: string;
   readonly description?: string;
 }
 

@@ -175,8 +175,8 @@ const HANDLERS: {
     const result = ctx.toJsonSchema(i.underlying);
     const t = result.type === 'optional' ? result.underlying : result;
     if (t) {
-      t.title = i.title;
-      t.description = i.description;
+      t.title = i.title ?? t.title;
+      t.description = i.description ?? t.description;
     }
     return result;
   },

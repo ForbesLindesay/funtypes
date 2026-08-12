@@ -9,7 +9,7 @@ import {
 } from '../runtype';
 
 export interface WithCommentOptions {
-  title: string;
+  title?: string;
   description?: string;
 }
 export function WithComment<TUnderlying>(
