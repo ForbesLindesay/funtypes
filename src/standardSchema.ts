@@ -17,18 +17,24 @@ export interface StandardSchema<Input = unknown, Output = Input> {
 
 let cache: undefined | WeakMap<Runtype, Map<string, StandardSchema>>;
 export interface StandardJsonSchemaOptions {
-  validateMode?: 'parse' | 'serialize' | 'assert';
   jsonSchemaMode?: { input?: JsonSchemaMode; output?: JsonSchemaMode };
+  /**
+   * Should named `$ref`s be used for `ft.Named`. Defaults to true.
+   */
+  namedRefs?: boolean;
+  validateMode?: 'parse' | 'serialize' | 'assert';
 }
 
 export function toStandardJsonSchema<T>(
   runtype: Codec<T>,
   options?: StandardJsonSchemaOptions,
 ): StandardSchema<T> {
-  const validateMode = options?.validateMode ?? 'parse';
   const inputMode = options?.jsonSchemaMode?.input ?? 'serialized';
   const outputMode = options?.jsonSchemaMode?.output ?? 'parsed';
-  const cacheKey = `${validateMode}:${inputMode}:${outputMode}`;
+  const namedRefs = options?.namedRefs ?? true;
+  const validateMode = options?.validateMode ?? 'parse';
+
+  const cacheKey = `${inputMode}:${outputMode}:${namedRefs}:${validateMode}`;
   if (!cache) cache = new WeakMap();
   let cacheForRuntype = cache.get(runtype);
   const cached = cacheForRuntype?.get(cacheKey);
@@ -60,8 +66,8 @@ export function toStandardJsonSchema<T>(
         return { value: validated.value as T };
       },
       jsonSchema: {
-        input: cachedToJsonSchema(runtype, inputMode),
-        output: cachedToJsonSchema(runtype, outputMode),
+        input: cachedToJsonSchema(runtype, inputMode, namedRefs),
+        output: cachedToJsonSchema(runtype, outputMode, namedRefs),
       },
     },
   };
@@ -69,11 +75,11 @@ export function toStandardJsonSchema<T>(
   return fresh;
 }
 
-function cachedToJsonSchema(runtype: Runtype, mode: JsonSchemaMode) {
+function cachedToJsonSchema(runtype: Runtype, mode: JsonSchemaMode, namedRefs: boolean) {
   // The standard-schema spec passes a `target`, but we produce the same output for every
   // target, so one cached schema can be reused regardless of which target is requested.
   let cache: JsonSchema | undefined;
-  return (): JsonSchema => cache ?? (cache = toJsonSchema(runtype, { mode }));
+  return (): JsonSchema => cache ?? (cache = toJsonSchema(runtype, { mode, namedRefs }));
 }
 
 export type JsonSchemaResult = JsonSchema | { type: 'optional'; underlying?: JsonSchema };
@@ -83,6 +89,10 @@ export interface JsonSchemaOptions {
    * Defaults to 'parsed'.
    */
   mode?: JsonSchemaMode;
+  /**
+   * Should named `$ref`s be used for `ft.Named`. Defaults to true.
+   */
+  namedRefs?: boolean;
 }
 export interface JsonSchemaContext {
   mode: JsonSchemaMode;
@@ -90,6 +100,7 @@ export interface JsonSchemaContext {
 }
 
 export function toJsonSchema(runtype: Runtype, options?: JsonSchemaOptions): JsonSchema {
+  const namedRefs = options?.namedRefs ?? true;
   const definitionNames = new Map<string, Runtype>();
   const $defs: Record<string, JsonSchema> = {};
   const innerContext: JsonSchemaContext = { mode: options?.mode ?? 'parsed', toJsonSchema };
@@ -109,7 +120,7 @@ export function toJsonSchema(runtype: Runtype, options?: JsonSchemaOptions): Jso
     if (!name) return result;
 
     result.title = name;
-    if (!/^[a-z](?:[_a-z0-9]*[a-z0-9])?$/i.test(name)) return result;
+    if (!namedRefs || !/^[a-z](?:[_a-z0-9]*[a-z0-9])?$/i.test(name)) return result;
 
     let candidate = name;
     let suffix = 1;

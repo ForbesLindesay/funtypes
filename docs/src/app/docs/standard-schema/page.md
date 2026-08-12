@@ -129,6 +129,58 @@ const schema = ft.toStandardJsonSchema(SomeCodec, {
 });
 ```
 
+### options.namedRefs
+
+By default, a [`ft.Named`](/docs/types-named) type (along with `ft.Brand` or a named [`ft.Constraint`](/docs/types-constraint)) is extracted into a top-level `$defs` map and referenced with `$ref` - see [Enriching the generated schema](#enriching-the-generated-schema) below. Some tools that consume JSON Schema don't support `$ref`/`$defs`, so you can set `namedRefs: false` to inline the full schema at every usage site instead. The `title` is still set to the name, but no `$ref` or `$defs` are produced:
+
+```ts
+import * as ft from "funtypes";
+
+const Point = ft.Named(
+  "Point",
+  ft.Object({ x: ft.Number, y: ft.Number }),
+);
+const LineCodec = ft.Object({ from: Point, to: Point });
+
+const schema = ft.toStandardJsonSchema(LineCodec, {
+  namedRefs: false,
+});
+
+assert.deepEqual(
+  schema["~standard"].jsonSchema.output({
+    target: "draft-2020-12",
+  }),
+  {
+    type: "object",
+    properties: {
+      from: {
+        type: "object",
+        properties: {
+          x: { type: "number" },
+          y: { type: "number" },
+        },
+        required: ["x", "y"],
+        title: "Point",
+      },
+      to: {
+        type: "object",
+        properties: {
+          x: { type: "number" },
+          y: { type: "number" },
+        },
+        required: ["x", "y"],
+        title: "Point",
+      },
+    },
+    required: ["from", "to"],
+  },
+);
+```
+
+{% callout title="This also inlines repeated types" type="warning" %}
+With `namedRefs: false`, a type used more than once (like `Point` above) is no longer de-duplicated - it's fully inlined at every usage site instead of being defined once and referenced. For deeply nested or widely reused types, this can make the resulting schema significantly larger.
+{% /callout %}
+
 ## ft.toJsonSchema
 
 If you just want a plain [JSON Schema](https://json-schema.org/) object, without the Standard Schema wrapper, use `ft.toJsonSchema(codec, options?)` directly:
@@ -156,6 +208,12 @@ Pass `{ mode: "serialized" }` to describe the pre-parse/wire shape instead of th
 
 ```ts
 ft.toJsonSchema(SomeCodec, { mode: "serialized" });
+```
+
+It also accepts `namedRefs: false`, which behaves the same as the [`ft.toStandardJsonSchema` option of the same name](#options-named-refs) described above:
+
+```ts
+ft.toJsonSchema(SomeCodec, { namedRefs: false });
 ```
 
 ## Enriching the generated schema

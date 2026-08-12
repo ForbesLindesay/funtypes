@@ -404,6 +404,60 @@ describe('brand/constraint/named ($defs and $ref)', () => {
     expect(schema.title).toBe('123 not an identifier!');
     expect(schema.type).toBe('object');
   });
+
+  describe('namedRefs: false', () => {
+    test('a named object is inlined instead of being extracted into $defs, but keeps its title', () => {
+      const Point = ft.Named('Point', ft.Object({ x: ft.Number, y: ft.Number }));
+      expect(ft.toJsonSchema(Point, { namedRefs: false })).toEqual({
+        type: 'object',
+        properties: { x: { type: 'number' }, y: { type: 'number' } },
+        required: ['x', 'y'],
+        title: 'Point',
+      });
+    });
+
+    test('a named type used more than once is inlined at every usage, rather than being de-duplicated via $ref', () => {
+      const Point = ft.Named('Point', ft.Object({ x: ft.Number, y: ft.Number }));
+      const Line = ft.Object({ from: Point, to: Point });
+      const expectedPoint = {
+        type: 'object',
+        properties: { x: { type: 'number' }, y: { type: 'number' } },
+        required: ['x', 'y'],
+        title: 'Point',
+      };
+      expect(ft.toJsonSchema(Line, { namedRefs: false })).toEqual({
+        type: 'object',
+        properties: { from: expectedPoint, to: expectedPoint },
+        required: ['from', 'to'],
+      });
+    });
+
+    test('a named brand is inlined, but keeps its title', () => {
+      expect(ft.toJsonSchema(ft.Brand('Foo', ft.String), { namedRefs: false })).toEqual({
+        type: 'string',
+        title: 'Foo',
+      });
+    });
+
+    test('a named constraint is inlined, but keeps its title', () => {
+      expect(
+        ft.toJsonSchema(
+          ft.Constraint(ft.Number, n => n > 0, { name: 'Positive' }),
+          {
+            namedRefs: false,
+          },
+        ),
+      ).toEqual({ type: 'number', title: 'Positive' });
+    });
+
+    test('the result never has a top-level $defs', () => {
+      const Point = ft.Named('Point', ft.Object({ x: ft.Number, y: ft.Number }));
+      const Line = ft.Object({ from: Point, to: Point });
+      const schema = ft.toJsonSchema(Line, { namedRefs: false });
+      expect(schema.$defs).toBeUndefined();
+      expect('$defs' in schema).toBe(false);
+    });
+  });
 });
 
 describe('comment', () => {
@@ -568,6 +622,36 @@ describe('toStandardJsonSchema', () => {
     });
     const input = schema['~standard'].jsonSchema.input({ target: 'draft-2020-12' });
     expect(input).toEqual(schema['~standard'].jsonSchema.output({ target: 'draft-2020-12' }));
+  });
+
+  test('namedRefs: false inlines ft.Named types instead of using $ref/$defs in the generated schema', () => {
+    const Point = ft.Named('Point', ft.Object({ x: ft.Number, y: ft.Number }));
+    const schema = ft.toStandardJsonSchema(ft.Object({ from: Point, to: Point }), {
+      namedRefs: false,
+    });
+    const output = schema['~standard'].jsonSchema.output({ target: 'draft-2020-12' });
+    expect(output.$defs).toBeUndefined();
+    expect(output.properties).toEqual({
+      from: {
+        type: 'object',
+        properties: { x: { type: 'number' }, y: { type: 'number' } },
+        required: ['x', 'y'],
+        title: 'Point',
+      },
+      to: {
+        type: 'object',
+        properties: { x: { type: 'number' }, y: { type: 'number' } },
+        required: ['x', 'y'],
+        title: 'Point',
+      },
+    });
+  });
+
+  test('different namedRefs settings are cached independently (distinct schema objects)', () => {
+    const runtype = ft.Object({ a: ft.String });
+    expect(ft.toStandardJsonSchema(runtype)).not.toBe(
+      ft.toStandardJsonSchema(runtype, { namedRefs: false }),
+    );
   });
 
   test('repeated calls with the same target are cached (same object reference)', () => {
