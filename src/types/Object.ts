@@ -42,7 +42,7 @@ function InternalObject<O extends RecordFields, Part extends boolean, RO extends
           let firstError: Failure | undefined;
           for (const [key, fieldSchema] of Object.entries(fields)) {
             const isOptional = isPartial || getInternal(fieldSchema)._isOptional;
-            if (!isPartial || (hasKey(key, x) && x[key] !== undefined)) {
+            if (!isOptional || (hasKey(key, x) && x[key] !== undefined)) {
               const value = isOptional || hasKey(key, x) ? x[key] : undefined;
               let validated = innerValidate(
                 fieldSchema,

@@ -43,6 +43,41 @@ assert.throws(() => StringOrNumber.parse(true));
 You can use `ft.Nullable(SomeCodec)` as a shorthand for `ft.Union(SomeCodec, ft.Null)`
 {% /callout %}
 
+## ft.Optional
+
+`ft.Optional(SomeCodec)` is a shorthand for `ft.Union(SomeCodec, ft.Undefined)`, but when used directly as a property of [`ft.Object`](/docs/types-object#optional-properties) or `ft.ReadonlyObject`, it also:
+
+- makes the property optional in the static TypeScript type (`nickname?: string`), rather than a required property whose value happens to allow `undefined` (`nickname: string | undefined`), and
+- makes Funtypes omit the property entirely, both when parsing and serializing, if it's missing or `undefined` - the same way [`ft.Partial`](/docs/types-partial) does.
+
+```ts
+import * as ft from "funtypes";
+
+const UserCodec = ft.Object({
+  id: ft.Number,
+  nickname: ft.Optional(ft.String),
+});
+// => ft.Codec<{ id: number; nickname?: string }>
+
+type User = ft.Static<typeof UserCodec>;
+// => { id: number; nickname?: string }
+
+// ✅ The property can be omitted entirely
+assert.deepEqual(UserCodec.parse({ id: 1 }), {
+  id: 1,
+});
+
+// ✅ Or it can have a value
+assert.deepEqual(
+  UserCodec.parse({ id: 1, nickname: "Bob" }),
+  { id: 1, nickname: "Bob" },
+);
+```
+
+{% callout title="ft.Optional outside of ft.Object" %}
+`ft.Optional` only changes anything when it's used directly as a field of [`ft.Object`](/docs/types-object) or [`ft.ReadonlyObject`](/docs/types-object#readonly-objects). Used anywhere else (as an array element, a tuple component, nested inside another union, etc.), it behaves exactly like `ft.Union(SomeCodec, ft.Undefined)`.
+{% /callout %}
+
 ## Tagged Object Unions
 
 A common pattern in TypeScript is to represent different possible states or object types as a union of objects, each with a property that identifies which type of object it is. For example, we could have a state machine like:

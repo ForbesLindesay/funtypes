@@ -143,6 +143,33 @@ test('OptionalProperties', () => {
   `);
 });
 
+test('a missing/undefined ft.Optional property is omitted from a plain Object, just like ft.Partial, but a plain ft.Union(X, ft.Undefined) property is populated with `undefined`', () => {
+  const WithOptional = ft.Object({ a: ft.Optional(ft.String) });
+  const WithUnion = ft.Object({ a: ft.Union(ft.String, ft.Undefined) });
+  const WithPartial = ft.Partial({ a: ft.String });
+
+  // `ft.Optional` behaves like `ft.Partial` at runtime: a
+  // missing (or explicitly `undefined`) property is left out
+  // of the result entirely, rather than being set to `undefined`.
+  expect('a' in WithOptional.parse({})).toBe(false);
+  expect('a' in WithOptional.parse({ a: undefined })).toBe(false);
+  expect(WithOptional.parse({})).toEqual({});
+  expect('a' in WithPartial.parse({})).toBe(false);
+
+  // A present value is still validated and kept, as normal.
+  expect(WithOptional.parse({ a: 'hello' })).toEqual({ a: 'hello' });
+
+  // `serialize` goes through the same logic as `parse` for
+  // plain Objects, so it behaves the same way.
+  expect('a' in (WithOptional.serialize({} as any) as object)).toBe(false);
+
+  // A plain `ft.Union(X, ft.Undefined)` field (i.e. one that
+  // wasn't built with `ft.Optional`) is NOT treated as
+  // optional, so Funtypes still populates it with `undefined`.
+  expect('a' in WithUnion.parse({})).toBe(true);
+  expect(WithUnion.parse({})).toEqual({ a: undefined });
+});
+
 export const PropertiesWithDefaults = ft.Object({
   a: ft.WithDefault(ft.String, 'Hello World'),
 });
