@@ -441,9 +441,12 @@ describe('brand/constraint/named ($defs and $ref)', () => {
 
     test('a named constraint is inlined, but keeps its title', () => {
       expect(
-        ft.toJsonSchema(ft.Constraint(ft.Number, n => n > 0, { name: 'Positive' }), {
-          namedRefs: false,
-        }),
+        ft.toJsonSchema(
+          ft.Constraint(ft.Number, n => n > 0, { name: 'Positive' }),
+          {
+            namedRefs: false,
+          },
+        ),
       ).toEqual({ type: 'number', title: 'Positive' });
     });
 
