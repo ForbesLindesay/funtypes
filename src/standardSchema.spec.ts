@@ -144,9 +144,12 @@ describe('union', () => {
       anyOf: [{ type: 'string' }, { type: 'number' }],
     });
   });
-  test('Nullable is represented as a union with null', () => {
-    expect(ft.toJsonSchema(ft.Nullable(ft.String))).toEqual({
-      anyOf: [{ type: 'string' }, { type: 'null', const: null }],
+  test('Nullable is represented via the prop', () => {
+    expect(ft.toJsonSchema(ft.Nullable(ft.String))).toEqual({ type: 'string', nullable: true });
+  });
+  test('Nullable union is represented as a union with null', () => {
+    expect(ft.toJsonSchema(ft.Nullable(ft.Union(ft.String, ft.Number)))).toEqual({
+      anyOf: [{ type: 'string' }, { type: 'number' }, { const: null, type: 'null' }],
     });
   });
   test('Optional at the top level cannot be represented, since it is meaningless outside an object', () => {
@@ -154,9 +157,14 @@ describe('union', () => {
       'Cannot represent undefined in JSON Schema',
     );
   });
-  test('Optional used as an object field produces an optional property (regression test)', () => {
+  test('Optional used as an object field produces an optional property', () => {
     const schema = ft.toJsonSchema(ft.Object({ a: ft.Optional(ft.String) }));
     expect(schema.properties).toEqual({ a: { type: 'string' } });
+    expect(schema.required).toBeUndefined();
+  });
+  test('Optional(Nullable) used as an object field produces an optional nullable property', () => {
+    const schema = ft.toJsonSchema(ft.Object({ a: ft.Optional(ft.Nullable(ft.String)) }));
+    expect(schema.properties).toEqual({ a: { type: 'string', nullable: true } });
     expect(schema.required).toBeUndefined();
   });
 

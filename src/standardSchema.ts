@@ -285,12 +285,16 @@ const HANDLERS: {
       }
     }
 
+    const nonNullAlternatives = alternatives.filter(a => a.type !== 'null');
     const result: JsonSchema | undefined =
       alternatives.length === 0
         ? undefined
         : alternatives.length === 1
           ? alternatives[0]
-          : { anyOf: alternatives };
+          : nonNullAlternatives.length === 1
+            ? { ...nonNullAlternatives[0], nullable: true }
+            : { anyOf: alternatives };
+
     if (isOptional) return { type: 'optional', underlying: result };
     if (result === undefined) return { not: {} };
     return result;
